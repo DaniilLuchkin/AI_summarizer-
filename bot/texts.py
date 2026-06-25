@@ -58,6 +58,9 @@ UNSUPPORTED_DOCUMENT = "⚠️ Элемент [{index}]: формат докум
 
 # --- Actions / custom prompt --------------------------------------------
 NO_ACTIVE_BATCH = "Сейчас нет активной пачки. Пришлите сообщения, и я соберу новую."
+# Echoed into the chat the moment an action button is tapped, so there's a
+# record of which action ran. `{label}` is the same button label as on the keyboard.
+ACTION_SELECTED = "🔹 {label}"
 THINKING = "🤔 Думаю…"
 CUSTOM_PROMPT_ASK = (
     "✍️ Напишите свою инструкцию (например: «составь ответ» или «сделай из этого "

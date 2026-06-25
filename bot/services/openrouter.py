@@ -98,6 +98,9 @@ class OpenRouterClient:
             # Surface the body to logs but keep user-facing messages friendly.
             logger.error("OpenRouter %s -> %s: %s", path, resp.status_code, resp.text[:500])
             raise OpenRouterError(f"OpenRouter {resp.status_code} on {path}")
+        # httpx parses the JSON body from raw bytes per the JSON spec (UTF-8),
+        # so Cyrillic/Unicode in the model's reply stays intact. Never decode the
+        # body manually with a non-UTF-8 codec here.
         return resp.json()
 
     @staticmethod
