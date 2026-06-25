@@ -11,8 +11,8 @@ from typing import Any, Awaitable, Callable
 from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, Message, TelegramObject, Update
 
-from bot import texts
 from bot.config import Settings
+from bot.texts import resolve_lang, t
 
 
 class AccessMiddleware(BaseMiddleware):
@@ -27,14 +27,14 @@ class AccessMiddleware(BaseMiddleware):
     ) -> Any:
         user = data.get("event_from_user")
         if user is not None and not self._settings.is_user_allowed(user.id):
-            await self._deny(event)
+            await self._deny(event, resolve_lang(user.language_code))
             return None  # drop the update
         return await handler(event, data)
 
     @staticmethod
-    async def _deny(event: Update) -> None:
-        """Tell the user they're not allowed, regardless of event type."""
+    async def _deny(event: Update, lang: str) -> None:
+        """Tell the user they're not allowed, in their language."""
         if isinstance(event.event, Message):
-            await event.event.answer(texts.NOT_ALLOWED)
+            await event.event.answer(t("not_allowed", lang))
         elif isinstance(event.event, CallbackQuery):
-            await event.event.answer(texts.NOT_ALLOWED, show_alert=True)
+            await event.event.answer(t("not_allowed", lang), show_alert=True)

@@ -1,12 +1,11 @@
-"""Shared helpers for sending LLM results back to Telegram.
+"""Shared helpers for sending LLM text results back to Telegram.
 
 Output strategy (prefer chat messages over files):
-  * answer <= one message -> send as a single plain-text message,
-  * longer -> split into multiple plain-text messages on line boundaries,
-  * only very long answers fall back to a .md file attachment.
+  * answer <= one message -> single plain-text message,
+  * longer -> multiple plain-text messages split on line boundaries,
+  * very long -> a .md file attachment (UTF-8).
 
-Everything is sent with parse_mode=None so raw LLM output (which often contains
-stray *, _, `, [] markdown) never triggers a Telegram parse error.
+parse_mode=None everywhere so raw LLM markdown never triggers a parse error.
 """
 
 from __future__ import annotations
@@ -14,33 +13,28 @@ from __future__ import annotations
 from aiogram.types import BufferedInputFile, Message
 
 from bot import texts
+from bot.texts import t
 
-# Telegram hard limit for a single text message.
 TELEGRAM_MESSAGE_LIMIT = 4096
-# Above this many characters, or more than this many message chunks, we send a
-# file instead of flooding the chat.
 FILE_THRESHOLD_CHARS = 12000
 MAX_MESSAGE_CHUNKS = 4
 
 
-async def send_result(message: Message, text: str) -> None:
+async def send_result(message: Message, text: str, lang: str) -> None:
     """Send `text`, preferring chat messages and falling back to a file."""
     text = text.strip() or "—"
 
-    # Fits in one message -> just send it.
     if len(text) <= TELEGRAM_MESSAGE_LIMIT:
         await message.answer(text, parse_mode=None)
         return
 
     chunks = _split_text(text, TELEGRAM_MESSAGE_LIMIT)
 
-    # Very long -> attach as a Markdown file (UTF-8) plus a short heads-up.
     if len(text) > FILE_THRESHOLD_CHARS or len(chunks) > MAX_MESSAGE_CHUNKS:
         document = BufferedInputFile(text.encode("utf-8"), filename=texts.RESULT_FILENAME)
-        await message.answer_document(document, caption=texts.LONG_RESULT_HEADS_UP)
+        await message.answer_document(document, caption=t("long_result_heads_up", lang))
         return
 
-    # Otherwise send the chunks in order as plain-text messages.
     for chunk in chunks:
         await message.answer(chunk, parse_mode=None)
 
@@ -48,11 +42,9 @@ async def send_result(message: Message, text: str) -> None:
 def _split_text(text: str, limit: int) -> list[str]:
     """Split text into <= limit chunks, breaking on line boundaries.
 
-    Lines are rejoined into buffers up to `limit`; a single line longer than
-    `limit` is hard-split. Blank lines are preserved, so paragraph boundaries
-    are respected naturally.
+    A single line longer than `limit` is hard-split. Blank lines are preserved,
+    so paragraph boundaries are respected naturally.
     """
-    # Break into atomic units no larger than `limit` (hard-split long lines).
     units: list[str] = []
     for line in text.split("\n"):
         if len(line) <= limit:

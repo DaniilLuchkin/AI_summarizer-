@@ -1,9 +1,11 @@
 # Telegram LLM bot — Railway worker (no public port, long polling).
 FROM python:3.12-slim
 
-# ffmpeg/ffprobe are required for audio extraction and segmentation.
+# System deps:
+#   ffmpeg            -> audio extraction + segmentation for transcription
+#   fonts-dejavu-core -> Unicode TTF so generated PDFs render Cyrillic correctly
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg \
+    && apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 # Don't buffer stdout/stderr so logs show up immediately in Railway.
