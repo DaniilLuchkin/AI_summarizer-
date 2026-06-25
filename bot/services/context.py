@@ -75,24 +75,34 @@ async def fetch_link(url: str, timeout: float, max_chars: int) -> str:
     ) as client:
         resp = await client.get(url)
         resp.raise_for_status()
-        html = resp.text
+        # Keep the raw bytes for the extractor (it detects the encoding itself,
+        # which correctly handles UTF-8 *and* declared charsets like cp1251).
+        # `resp.text` is httpx's charset-aware decode, used only as a fallback.
+        raw_bytes = resp.content
+        fallback_text = resp.text
 
-    text = _extract_main_text(html)
+    text = _extract_main_text(raw_bytes, fallback_text)
     return _truncate(text, max_chars)
 
 
-def _extract_main_text(html: str) -> str:
-    """Prefer trafilatura's main-content extraction; fall back to tag stripping."""
+def _extract_main_text(raw_bytes: bytes, fallback_text: str) -> str:
+    """Prefer trafilatura's main-content extraction; fall back to tag stripping.
+
+    trafilatura is given the raw bytes so it can detect the page's real encoding
+    instead of us guessing — this avoids latin-1/UTF-8 double-encoding mojibake.
+    """
     try:
         import trafilatura
 
-        extracted = trafilatura.extract(html, include_comments=False, include_tables=False)
+        extracted = trafilatura.extract(
+            raw_bytes, include_comments=False, include_tables=False
+        )
         if extracted:
             return extracted
     except Exception as exc:  # noqa: BLE001 - never let extraction crash the bot
         logger.warning("trafilatura failed, falling back to tag strip: %s", exc)
 
-    # Crude fallback: drop tags and collapse whitespace.
-    stripped = _TAG_RE.sub(" ", html)
+    # Crude fallback: drop tags and collapse whitespace (uses httpx's decoded text).
+    stripped = _TAG_RE.sub(" ", fallback_text)
     stripped = _WS_RE.sub("\n\n", stripped)
     return " ".join(stripped.split())

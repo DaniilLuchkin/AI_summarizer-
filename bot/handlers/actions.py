@@ -10,7 +10,7 @@ from aiogram.types import CallbackQuery
 
 from bot import texts
 from bot.handlers.run import ACTION_CB_PREFIX, CustomStates, run_llm
-from bot.prompts import ACTIONS_BY_KEY, CUSTOM_KEY
+from bot.prompts import ACTIONS_BY_KEY, CUSTOM_KEY, CUSTOM_LABEL
 from bot.runtime import AppContext
 
 logger = logging.getLogger(__name__)
@@ -34,6 +34,8 @@ def build_router(ctx: AppContext) -> Router:
 
         # The custom-prompt button switches the chat into the FSM input state.
         if key == CUSTOM_KEY:
+            # Echo the choice so the chat keeps a record of what was tapped.
+            await message.answer(texts.ACTION_SELECTED.format(label=CUSTOM_LABEL))
             await state.set_state(CustomStates.waiting_for_instruction)
             await message.answer(texts.CUSTOM_PROMPT_ASK)
             return
@@ -42,6 +44,9 @@ def build_router(ctx: AppContext) -> Router:
         if action is None:
             await message.answer(texts.GENERIC_ERROR)
             return
+
+        # Echo the chosen action before doing any work.
+        await message.answer(texts.ACTION_SELECTED.format(label=action.label))
 
         document, truncated = ctx.store.assemble_for_llm(chat_state)
         if truncated:
