@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     model_text: str
     model_vision: str
     model_transcribe: str
+    model_image: str
 
     # Attribution headers OpenRouter uses to identify the calling app.
     openrouter_app_title: str = "Telegram LLM Bot"

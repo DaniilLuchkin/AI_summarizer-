@@ -2,12 +2,15 @@
 
 A Telegram bot that turns a **batch of mixed messages** — text, voice,
 video notes ("кружочки"), videos, audio, documents and photos — into one
-combined text document, then runs LLM **actions** on it (summary, structured
-outline, draft reply, follow-up email, action items, translate) or a
-free-text **custom prompt** with optional file/link context.
+combined text document, then runs LLM **actions** on it (summary, structure,
+draft reply, follow-up email, action items, translate, **presentation**,
+**PDF**, **image**) or a free-text **custom prompt** with optional file/link
+context.
 
-Everything (chat, vision/OCR, transcription) goes through a **single
-OpenRouter API key**. State is **in-memory only** — no database.
+Everything (chat, vision/OCR, transcription, image generation) goes through a
+**single OpenRouter API key**. The UI is **multilingual (ru / en / uk)**, chosen
+from each user's Telegram `language_code`. State is **in-memory only** — no
+database.
 
 ---
 
@@ -19,18 +22,25 @@ OpenRouter API key**. State is **in-memory only** — no database.
    - voice / video note / video / audio → transcribed (auto-segmented if > ~60s),
    - photos → vision model extracts text (OCR) + a one-line description,
    - documents (`.pdf/.docx/.txt/.md`) → parsed to text.
-   Each item is labeled, e.g. `[1] (текст): …`, `[2] (голосовое → расшифровка): …`.
+   Each item is labeled with the **sender's name**, e.g.
+   `[1] Иван Петров (voice → transcript): …`, `[3] Ты (photo → ocr): …`.
 3. The bot shows an inline keyboard of actions.
-4. Tap a predefined action, or **✍️ Свой запрос** to type your own instruction.
-   With a custom prompt you may attach context in the same message:
-   a **link** in the text and/or an attached **file**.
+4. Tap a predefined action, or **✍️ Custom prompt** to type your own
+   instruction. The bot then asks whether to **attach context** (a file or a
+   link), which is parsed and appended before the LLM call.
 5. The batch stays active — run as many actions/custom prompts as you like.
    Send new messages (or `/reset`) to start a fresh batch.
 
-Long answers (> 4096 chars) are delivered as a `.md` file.
+### Actions
+Text actions (📝 Summary, 📋 Structure, 💬 Draft reply, ✉️ Follow-up email,
+✅ Action items, 🌐 Translate) reply in chat. Long answers split into multiple
+messages; very long ones arrive as `result.md`. Generators produce files/photos:
+- **📊 Presentation** → `.pptx` (python-pptx) built from a JSON slide spec.
+- **📄 PDF** → `.pdf` (fpdf2 + DejaVu font, full Cyrillic) from structured text.
+- **🎨 Image** → a generated image (OpenRouter image model) with its prompt as caption.
 
 ### Commands
-- `/start` — usage help
+- `/start` — usage help (localized)
 - `/reset` — clear the current batch
 
 ---
@@ -41,27 +51,29 @@ Long answers (> 4096 chars) are delivered as a `.md` file.
 bot/
   main.py              # bootstrap: settings, dispatcher, routers, polling
   config.py            # env settings (pydantic-settings)
-  texts.py             # all Russian UI strings
-  prompts.py           # system prompts for predefined actions + vision/custom
-  middleware.py        # ALLOWED_USER_IDS access control
-  output.py            # send result as message or .md file
+  texts.py             # UI strings in ru/en/uk + t() / resolve_lang() helpers
+  prompts.py           # system prompts for actions + generators + vision/custom
+  middleware.py        # ALLOWED_USER_IDS access control (localized)
+  output.py            # send result as message(s) or .md file
   runtime.py           # shared service container (AppContext)
   handlers/
     commands.py        # /start, /reset
-    collect.py         # batch collection + debounce + finalize
-    actions.py         # inline keyboard callbacks (predefined actions)
-    custom.py          # custom-prompt FSM + context attachment
+    collect.py         # batch collection + debounce + finalize + sender names
+    actions.py         # keyboard callbacks: text actions + pptx/pdf/image + echo
+    custom.py          # custom-prompt FSM + "add context?" step
     run.py             # actions keyboard + rate-limited LLM call (shared)
   services/
-    openrouter.py      # async chat / vision / transcription client
+    openrouter.py      # async chat / vision / transcription / image client
     media.py           # download + ffmpeg/ffprobe helpers
     transcribe.py      # audio bytes -> text (with segmentation)
     vision.py          # photo -> text
     context.py         # files (pdf/docx/txt/md) + links -> text
-    batch.py           # in-memory batch store + assembly
+    batch.py           # in-memory batch store + assembly (+ per-chat lang)
     ratelimit.py       # in-memory per-user limiter
+    pptx_builder.py    # JSON slide spec -> python-pptx file
+    pdf_builder.py     # structured text -> fpdf2 PDF (DejaVu/Cyrillic)
 requirements.txt
-Dockerfile             # python:3.12-slim + ffmpeg, runs `python -m bot.main`
+Dockerfile             # python:3.12-slim + ffmpeg + fonts-dejavu-core
 .env.example
 ```
 
@@ -72,9 +84,10 @@ Dockerfile             # python:3.12-slim + ffmpeg, runs `python -m bot.main`
 Requirements: **Python 3.12** and **ffmpeg/ffprobe** on your `PATH`.
 
 ```bash
-# 1. Install ffmpeg (Debian/Ubuntu)
-sudo apt-get install -y ffmpeg
-#    macOS: brew install ffmpeg
+# 1. Install ffmpeg + DejaVu fonts (Debian/Ubuntu)
+sudo apt-get install -y ffmpeg fonts-dejavu-core
+#    macOS: brew install ffmpeg   (DejaVu ships with most macOS setups;
+#    if PDF generation can't find it, install a DejaVuSans.ttf system-wide)
 
 # 2. Create a virtualenv and install deps
 python3.12 -m venv .venv
@@ -107,7 +120,7 @@ This bot runs as a **worker** (outbound only, no HTTP port).
 3. Open the service → **Variables** and add the values from `.env.example`:
    - `TELEGRAM_BOT_TOKEN`
    - `OPENROUTER_API_KEY`
-   - `MODEL_TEXT`, `MODEL_VISION`, `MODEL_TRANSCRIBE` *(confirm slugs first)*
+   - `MODEL_TEXT`, `MODEL_VISION`, `MODEL_TRANSCRIBE`, `MODEL_IMAGE` *(confirm slugs first)*
    - any tuning/guardrail vars you want to override
    *(Do **not** set a `PORT`; this is a worker, not a web service.)*
 4. Deploy. Watch **Logs** for `Starting polling`.
@@ -134,6 +147,7 @@ See [`.env.example`](.env.example) for every variable with comments. Highlights:
 ### A note on models
 Model slugs on OpenRouter change over time. The defaults in `.env.example`
 were the current matches as of 2026-06 for DeepSeek (text), Gemini Flash
-(vision) and Whisper Large v3 (transcription) — **verify them at
-<https://openrouter.ai/models> before deploying.** Because models are
-config-only, you can swap them without touching code.
+(vision), Whisper Large v3 (transcription) and Gemini Flash Image
+(`MODEL_IMAGE`) — **verify them at <https://openrouter.ai/models> before
+deploying.** Because models are config-only, you can swap them without touching
+code.

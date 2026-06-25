@@ -88,6 +88,34 @@ class OpenRouterClient:
             raise OpenRouterError(f"Unexpected transcription response: {data!r}")
         return text.strip()
 
+    # --- Image generation ------------------------------------------------
+    async def generate_image(self, prompt: str, aspect_ratio: str = "1:1") -> bytes:
+        """Generate an image and return its raw bytes.
+
+        OpenRouter may return either an http(s) URL or a base64 data URI; we
+        handle both. Network downloads follow redirects with a 60s timeout.
+        """
+        payload = {
+            "model": self._settings.model_image,
+            "prompt": prompt,
+            "aspect_ratio": aspect_ratio,
+        }
+        data = await self._post("/images", payload)
+        try:
+            url = data["data"][0]["url"]
+        except (KeyError, IndexError, TypeError) as exc:
+            raise OpenRouterError(f"Unexpected image response: {data!r}") from exc
+
+        if url.startswith("data:"):
+            # data:image/...;base64,<payload>
+            b64 = url.split(",", 1)[1]
+            return base64.b64decode(b64)
+
+        async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+            return resp.content
+
     # --- Internals -------------------------------------------------------
     async def _post(self, path: str, payload: dict) -> dict:
         try:

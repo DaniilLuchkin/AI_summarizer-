@@ -16,6 +16,9 @@ from aiogram.types import Message
 @dataclass
 class ChatState:
     chat_id: int
+    # Per-user UI language (ru/en/uk), set from the first message of a session
+    # and refreshed when a new batch starts.
+    lang: str = "ru"
     # Raw aiogram messages awaiting finalize (the current, not-yet-processed batch).
     pending: list[Message] = field(default_factory=list)
     # Handle to the debounce timer task so we can cancel/reschedule it.
