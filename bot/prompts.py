@@ -106,6 +106,29 @@ CUSTOM_SYSTEM = (
     + _COMMON
 )
 
+# --- Group mode --------------------------------------------------------------
+# Each is fed a transcript of recent group messages as "Name: text" lines.
+_GROUP_COMMON = (
+    "You are summarizing a group chat. Respond in the dominant language of the "
+    "messages. Attribute points to the named people. Be concise and factual; "
+    "rely only on the provided messages. "
+)
+GROUP_SUMMARY_SYSTEM = (
+    _GROUP_COMMON
+    + "Produce a short recap: who raised what, proposals, decisions, and open "
+    "questions (e.g. 'Ivan raised X; Maria proposed Y; decision: Z; open: W')."
+)
+GROUP_ASK_SYSTEM = (
+    _GROUP_COMMON
+    + "Answer the user's question (given after the messages) using only what was "
+    "said in the thread. If the thread doesn't cover it, say so."
+)
+GROUP_ACTIONS_SYSTEM = (
+    _GROUP_COMMON
+    + "Extract concrete action items and decisions as a list in the form "
+    "'Task — Owner — Due (if any)', then list decisions separately."
+)
+
 # Sent alongside each photo to the vision model.
 VISION_PROMPT = (
     "Extract all text from this image verbatim (preserve the original language). "

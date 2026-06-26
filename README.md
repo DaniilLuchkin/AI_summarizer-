@@ -134,6 +134,31 @@ This bot runs as a **worker** (outbound only, no HTTP port).
    *(Do **not** set a `PORT`; this is a worker, not a web service.)*
 5. Deploy. Watch **Logs** for `Schema applied` then `Starting polling`.
 
+### Group mode (thread summaries) — ⚠️ requires privacy mode OFF
+
+The bot can summarize a group conversation (`/summary`, plus `/ask` and
+`/actions` for Pro), but Telegram imposes a hard constraint:
+
+> **A bot with privacy mode ON (the default) cannot see normal group chatter** —
+> only commands, @mentions, and replies to its own messages. To read the thread
+> you **must disable privacy mode**, then **remove and re-add** the bot.
+
+Setup:
+1. **BotFather → `/setprivacy` → pick your bot → Disable.**
+2. **Remove the bot from the group and add it back** (the change only applies on
+   re-join). With privacy off, the bot reads all messages **without** admin rights.
+3. It now buffers messages **in memory** (capped at `GROUP_BUFFER_MAX`,
+   auto-expiring after `GROUP_BUFFER_TTL_HOURS`) — **nothing about group content is
+   written to Postgres**, and the buffer resets on redeploy.
+
+Important: the Bot API **cannot fetch chat history.** The bot can only summarize
+messages it received **live, after it joined with privacy off.** Right after
+joining, `/summary` will say there's nothing buffered yet.
+
+Group commands: `/summary [N]` (free, windowed), `/ask <q>` + `/actions` (Pro/BYO),
+`/clear` (admins wipe the buffer). Each LLM command consumes the invoker's daily
+`llm_calls` quota and is rate-limited by a per-group cooldown.
+
 ### Monetization & persistence layer
 - **Postgres** (asyncpg, no ORM) stores only durable data: users/quotas, Pro
   status, encrypted BYO keys, saved prompts, payments, and a media cache. The

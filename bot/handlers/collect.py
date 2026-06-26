@@ -14,7 +14,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from aiogram import Bot, Router
+from aiogram import Bot, F, Router
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
@@ -41,9 +41,9 @@ logger = logging.getLogger(__name__)
 def build_router(ctx: AppContext) -> Router:
     router = Router(name="collect")
 
-    # Only handle messages in the default state; staged-action / custom states
-    # are handled by actions.py.
-    @router.message(StateFilter(None))
+    # Only handle private-chat messages in the default state; staged-action /
+    # custom states are handled by actions.py, and group chats by group.py.
+    @router.message(StateFilter(None), F.chat.type == "private")
     async def collect(message: Message, state: FSMContext, bot: Bot) -> None:
         await handle_incoming(ctx, message, state, bot)
 
