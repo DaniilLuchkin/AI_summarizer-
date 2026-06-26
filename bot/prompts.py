@@ -25,12 +25,18 @@ NAME_INSTRUCTION = (
     "When referring to people, use their names exactly as labeled in the context. "
 )
 
-# Reply in the language of the source material unless told otherwise.
+# Answer-language rule appended to every action prompt and the custom wrapper.
+# The answer content follows the SOURCE messages, not the user's UI language.
+SOURCE_LANG_INSTRUCTION = (
+    "Respond in the same language as the source messages above, unless the "
+    "instruction explicitly requests a different language. "
+)
+
+# Shared tail for predefined text actions.
 _COMMON = (
     NAME_INSTRUCTION
-    + "Reply in the language of the source material (Russian for Russian input, "
-    "Ukrainian for Ukrainian, English for English). Rely only on the provided "
-    "text and do not invent facts."
+    + SOURCE_LANG_INSTRUCTION
+    + "Rely only on the provided text and do not invent facts."
 )
 
 # --- Predefined text actions -------------------------------------------------
@@ -62,7 +68,7 @@ SYSTEM_PROMPTS: dict[str, str] = {
         "You are a professional translator. Translate the entire combined text "
         "into English, preserving meaning, tone and formatting. If there are "
         "service labels like '[1] Name (...)', translate only the content part. "
-        + NAME_INSTRUCTION
+        + NAME_INSTRUCTION + SOURCE_LANG_INSTRUCTION
     ),
 }
 
@@ -74,7 +80,7 @@ PRESENTATION_SYSTEM = (
     '{"title": "Presentation title", "slides": [{"title": "Slide title", '
     '"bullets": ["point 1", "point 2"]}]}\n'
     "Produce 5–10 slides capturing the key ideas. " + NAME_INSTRUCTION
-    + "Write slide text in the language of the source material."
+    + SOURCE_LANG_INSTRUCTION
 )
 
 # PDF: structured plain-text document parsed line-by-line by pdf_builder.
@@ -82,7 +88,7 @@ PDF_SYSTEM = (
     "You produce a clean, structured document as plain UTF-8 text. Use '# ' for "
     "main headings, '## ' for subheadings, '- ' for bullet points, and blank "
     "lines between blocks. No markdown tables, no code fences. " + NAME_INSTRUCTION
-    + "Write in the language of the source material."
+    + SOURCE_LANG_INSTRUCTION
 )
 
 # Image: returns ONLY a vivid prompt string for the image model.

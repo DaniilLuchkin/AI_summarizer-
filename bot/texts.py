@@ -8,22 +8,20 @@ Every handler resolves a per-user `lang` (see `resolve_lang`) and passes it to
 from __future__ import annotations
 
 SUPPORTED_LANGS = ("ru", "en", "uk")
-DEFAULT_LANG = "ru"  # acceptance: unknown language_code -> Russian
+DEFAULT_LANG = "en"  # English is the default for any non-ru/uk language_code
 
 
 def resolve_lang(language_code: str | None) -> str:
     """Map a Telegram language_code to one of our supported UI languages.
 
-    ru -> ru, uk -> uk, en -> en, anything else -> Russian (the bot's primary
-    audience). Only the language prefix matters (e.g. "en-US" -> "en").
+    ru -> ru, uk -> uk, everything else -> English (the default). Only the
+    language prefix matters (e.g. "en-US" -> "en", "de" -> "en").
     """
     code = (language_code or "").lower()
     if code.startswith("ru"):
         return "ru"
     if code.startswith("uk"):
         return "uk"
-    if code.startswith("en"):
-        return "en"
     return DEFAULT_LANG
 
 
@@ -81,7 +79,11 @@ TEXTS: dict[str, dict[str, str]] = {
         "unsupported_document": "⚠️ Элемент [{index}]: формат документа не поддерживается.",
         "no_active_batch": "Сейчас нет активной пачки. Пришлите сообщения, и я соберу новую.",
         "thinking": "🤔 Думаю…",
-        "action_selected": "🔹 {label}",
+        "action_context_hint": (
+            "Добавьте контекст (текст, файл или ссылку) и отправьте — "
+            "или нажмите ▶️ Запустить."
+        ),
+        "btn_run": "▶️ Запустить",
         "custom_prompt_ask": (
             "✍️ Напишите свою инструкцию (например: «составь ответ» или «сделай "
             "из этого промпт для другой нейросети»)."
@@ -126,7 +128,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "action_presentation": "📊 Презентация",
         "action_pdf": "📄 PDF",
         "action_image": "🎨 Картинка",
-        "action_custom": "✍️ Свой запрос",
+        "action_custom": "✍️ Или просто напишите свой запрос ⬇️",
     },
     # ================================================================= EN ===
     "en": {
@@ -162,7 +164,10 @@ TEXTS: dict[str, dict[str, str]] = {
         "unsupported_document": "⚠️ Item [{index}]: unsupported document format.",
         "no_active_batch": "There's no active batch. Send some messages and I'll build one.",
         "thinking": "🤔 Thinking…",
-        "action_selected": "🔹 {label}",
+        "action_context_hint": (
+            "Add context (text, file, or link), then send — or tap ▶️ Run."
+        ),
+        "btn_run": "▶️ Run",
         "custom_prompt_ask": (
             "✍️ Type your instruction (e.g. “draft a reply” or “turn this into a "
             "prompt for another LLM”)."
@@ -205,7 +210,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "action_presentation": "📊 Presentation",
         "action_pdf": "📄 PDF",
         "action_image": "🎨 Image",
-        "action_custom": "✍️ Custom prompt",
+        "action_custom": "✍️ Or just type your prompt ⬇️",
     },
     # ================================================================= UK ===
     "uk": {
@@ -242,7 +247,11 @@ TEXTS: dict[str, dict[str, str]] = {
         "unsupported_document": "⚠️ Елемент [{index}]: формат документа не підтримується.",
         "no_active_batch": "Зараз немає активної пачки. Надішліть повідомлення, і я зберу нову.",
         "thinking": "🤔 Думаю…",
-        "action_selected": "🔹 {label}",
+        "action_context_hint": (
+            "Додайте контекст (текст, файл або посилання) і надішліть — "
+            "або натисніть ▶️ Запустити."
+        ),
+        "btn_run": "▶️ Запустити",
         "custom_prompt_ask": (
             "✍️ Напишіть свою інструкцію (наприклад: «склади відповідь» або «зроби "
             "з цього промпт для іншої нейромережі»)."
@@ -286,6 +295,6 @@ TEXTS: dict[str, dict[str, str]] = {
         "action_presentation": "📊 Презентація",
         "action_pdf": "📄 PDF",
         "action_image": "🎨 Зображення",
-        "action_custom": "✍️ Свій запит",
+        "action_custom": "✍️ Або просто напишіть свій запит ⬇️",
     },
 }
