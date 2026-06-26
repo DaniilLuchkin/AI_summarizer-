@@ -55,7 +55,12 @@ class OpenRouterClient:
 
     # --- Vision ----------------------------------------------------------
     async def vision(
-        self, image_bytes: bytes, prompt: str, mime: str = "image/jpeg", api_key: str | None = None
+        self,
+        image_bytes: bytes,
+        prompt: str,
+        mime: str = "image/jpeg",
+        api_key: str | None = None,
+        model: str | None = None,
     ) -> str:
         """Send one image + a text prompt to the vision model (base64 data URI)."""
         b64 = base64.b64encode(image_bytes).decode("ascii")
@@ -69,7 +74,7 @@ class OpenRouterClient:
                 ],
             }
         ]
-        payload = {"model": self._settings.model_vision, "messages": messages}
+        payload = {"model": model or self._settings.model_vision, "messages": messages}
         data = await self._post("/chat/completions", payload, api_key=api_key)
         return self._extract_message(data)
 
@@ -80,6 +85,7 @@ class OpenRouterClient:
         audio_format: str,
         language: str | None = None,
         api_key: str | None = None,
+        model: str | None = None,
     ) -> str:
         """Transcribe one audio chunk.
 
@@ -88,7 +94,7 @@ class OpenRouterClient:
         """
         b64 = base64.b64encode(audio_bytes).decode("ascii")
         payload: dict = {
-            "model": self._settings.model_transcribe,
+            "model": model or self._settings.model_transcribe,
             "input_audio": {"data": b64, "format": audio_format},
         }
         if language:
@@ -101,7 +107,11 @@ class OpenRouterClient:
 
     # --- Image generation ------------------------------------------------
     async def generate_image(
-        self, prompt: str, aspect_ratio: str = "1:1", api_key: str | None = None
+        self,
+        prompt: str,
+        aspect_ratio: str = "1:1",
+        api_key: str | None = None,
+        model: str | None = None,
     ) -> bytes:
         """Generate an image and return its raw bytes.
 
@@ -109,7 +119,7 @@ class OpenRouterClient:
         handle both. Network downloads follow redirects with a 60s timeout.
         """
         payload = {
-            "model": self._settings.model_image,
+            "model": model or self._settings.model_image,
             "prompt": prompt,
             "aspect_ratio": aspect_ratio,
         }
@@ -128,6 +138,19 @@ class OpenRouterClient:
             resp = await client.get(url)
             resp.raise_for_status()
             return resp.content
+
+    # --- Model catalog ---------------------------------------------------
+    async def list_models(self, api_key: str | None = None) -> list[dict]:
+        """Return OpenRouter's model catalog (the `data` array)."""
+        extra = {"Authorization": f"Bearer {api_key}"} if api_key else None
+        try:
+            resp = await self._client.get("/models", headers=extra)
+        except httpx.HTTPError as exc:
+            raise OpenRouterError(f"HTTP error listing models: {exc}") from exc
+        if resp.status_code >= 400:
+            raise OpenRouterError(f"OpenRouter {resp.status_code} on /models")
+        data = resp.json()
+        return data.get("data", []) if isinstance(data, dict) else []
 
     # --- Key validation --------------------------------------------------
     async def validate_key(self, api_key: str) -> bool:

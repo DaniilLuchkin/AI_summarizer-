@@ -180,7 +180,8 @@ async def run_staged(
         return
 
     api_key = await ctx.quota.api_key_for(user_id)
-    model = await ctx.quota.model_for(user_id)
+    # Per-task model resolution honours a BYO user's /models overrides.
+    model = await ctx.models.resolve(user_id, "text")
 
     if action_key == "custom":
         content = _build_custom_content(document, added_text, parts)
@@ -199,7 +200,8 @@ async def run_staged(
         await _make_pdf(message, ctx, lang, content, model, api_key)
     elif action_key == "image":
         content = _build_action_content(document, added_text, parts)
-        await _make_image(message, ctx, lang, content, model, api_key)
+        image_model = await ctx.models.resolve(user_id, "image")
+        await _make_image(message, ctx, lang, content, model, api_key, image_model)
 
 
 async def run_typed_custom(ctx: AppContext, message: Message, bot: Bot, lang: str) -> None:
@@ -255,15 +257,16 @@ async def _make_pdf(message, ctx, lang, content, model, api_key):
     await _resend_keyboard(message, lang)
 
 
-async def _make_image(message, ctx, lang, content, model, api_key):
+async def _make_image(message, ctx, lang, content, model, api_key, image_model=None):
     status = await message.answer(t("building_image", lang))
     try:
+        # `model` writes the image prompt (text slot); `image_model` renders it.
         prompt = await ctx.orclient.chat(
             [{"role": "system", "content": IMAGE_PROMPT_SYSTEM}, {"role": "user", "content": content}],
             model=model, api_key=api_key,
         )
         prompt = prompt.strip()
-        image_bytes = await ctx.orclient.generate_image(prompt, api_key=api_key)
+        image_bytes = await ctx.orclient.generate_image(prompt, api_key=api_key, model=image_model)
         await message.answer_photo(
             BufferedInputFile(image_bytes, filename="image.jpg"), caption=prompt[:_CAPTION_LIMIT]
         )

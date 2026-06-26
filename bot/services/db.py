@@ -190,6 +190,34 @@ class Database:
             telegram_id,
         )
 
+    # --- Per-task model overrides ----------------------------------------
+    # Maps a slot name to its column. Used to build safe SQL (whitelisted names).
+    _MODEL_COLUMNS = {
+        "text": "model_text",
+        "vision": "model_vision",
+        "transcribe": "model_transcribe",
+        "image": "model_image",
+    }
+
+    async def get_user_models(self, telegram_id: int) -> asyncpg.Record | None:
+        return await self.pool.fetchrow(
+            "SELECT * FROM user_models WHERE telegram_id=$1", telegram_id
+        )
+
+    async def set_user_model(self, telegram_id: int, slot: str, slug: str | None) -> None:
+        """Upsert one slot's override (slug=None clears it -> global default)."""
+        column = self._MODEL_COLUMNS[slot]  # KeyError on bad slot is intentional
+        await self.pool.execute(
+            f"""
+            INSERT INTO user_models (telegram_id, {column}) VALUES ($1, $2)
+            ON CONFLICT (telegram_id) DO UPDATE SET {column}=EXCLUDED.{column}, updated_at=now()
+            """,
+            telegram_id, slug,
+        )
+
+    async def reset_user_models(self, telegram_id: int) -> None:
+        await self.pool.execute("DELETE FROM user_models WHERE telegram_id=$1", telegram_id)
+
     # --- Deletion (privacy) ----------------------------------------------
     async def delete_user(self, telegram_id: int) -> None:
         """Delete all rows tied to a telegram_id (media_cache is anonymous)."""
@@ -198,4 +226,5 @@ class Database:
                 await conn.execute("DELETE FROM payments WHERE telegram_id=$1", telegram_id)
                 await conn.execute("DELETE FROM saved_prompts WHERE telegram_id=$1", telegram_id)
                 await conn.execute("DELETE FROM usage_daily WHERE telegram_id=$1", telegram_id)
+                await conn.execute("DELETE FROM user_models WHERE telegram_id=$1", telegram_id)
                 await conn.execute("DELETE FROM users WHERE telegram_id=$1", telegram_id)

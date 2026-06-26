@@ -11,6 +11,7 @@ from bot.config import Settings
 from bot.services.batch import BatchStore
 from bot.services.db import Database
 from bot.services.group_buffer import GroupBuffer
+from bot.services.models import ModelService
 from bot.services.openrouter import OpenRouterClient
 from bot.services.quota import Quota
 from bot.services.ratelimit import RateLimiter
@@ -25,3 +26,4 @@ class AppContext:
     db: Database
     quota: Quota
     group_buffer: GroupBuffer
+    models: ModelService

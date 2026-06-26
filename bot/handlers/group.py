@@ -51,7 +51,7 @@ def build_router(ctx: AppContext) -> Router:
     async def _run_llm(message: Message, invoker_id: int, lang: str, system: str, content: str):
         """Call the text model with the invoker's BYO key / Pro model and post it."""
         api_key = await ctx.quota.api_key_for(invoker_id)
-        model = await ctx.quota.model_for(invoker_id)
+        model = await ctx.models.resolve(invoker_id, "text")
         try:
             answer = await ctx.orclient.chat(
                 [
