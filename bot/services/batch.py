@@ -12,13 +12,17 @@ from dataclasses import dataclass, field
 
 from aiogram.types import Message
 
+from bot.texts import resolve_lang
+
 
 @dataclass
 class ChatState:
     chat_id: int
-    # Per-user UI language (ru/en/uk), set from the first message of a session
-    # and refreshed when a new batch starts.
-    lang: str = "ru"
+    # Auto-detected UI language (from language_code), refreshed when a new batch
+    # starts. May be None until first set.
+    lang: str | None = None
+    # Manual /lang choice. When set it wins over `lang` and over language_code.
+    lang_override: str | None = None
     # Raw aiogram messages awaiting finalize (the current, not-yet-processed batch).
     pending: list[Message] = field(default_factory=list)
     # Handle to the debounce timer task so we can cancel/reschedule it.
@@ -64,12 +68,41 @@ class BatchStore:
         state.pending.append(message)
         return True
 
-    def reset(self, chat_id: int) -> None:
-        """Clear everything for a chat and cancel any pending debounce timer."""
+    # --- Language ---------------------------------------------------------
+    def set_lang(self, chat_id: int, lang: str) -> None:
+        """Store the auto-detected language (does not touch a manual override)."""
+        self.get_or_create(chat_id).lang = lang
+
+    def set_lang_override(self, chat_id: int, lang: str) -> None:
+        """Store a manual /lang choice (wins over detection)."""
+        self.get_or_create(chat_id).lang_override = lang
+
+    def get_lang(self, chat_id: int) -> str | None:
+        """Override if present, else the stored detected value (may be None)."""
         state = self._states.get(chat_id)
-        if state and state.debounce_task and not state.debounce_task.done():
+        if state is None:
+            return None
+        return state.lang_override or state.lang
+
+    def lang_for(self, message: Message) -> str:
+        """Effective UI language: override > language_code (ru/uk/en) > en."""
+        return self.get_lang(message.chat.id) or resolve_lang(
+            message.from_user.language_code if message.from_user else None
+        )
+
+    # --- Session lifecycle ------------------------------------------------
+    def clear_session(self, chat_id: int) -> None:
+        """Drop the batch buffer + cancel the debounce timer. Keeps language."""
+        state = self._states.get(chat_id)
+        if state is None:
+            return
+        if state.debounce_task and not state.debounce_task.done():
             state.debounce_task.cancel()
-        self._states.pop(chat_id, None)
+        state.pending = []
+        state.item_texts = []
+        state.dropped = 0
+        state.limit_notified = False
+        state.debounce_task = None
 
     def start_new_batch(self, state: ChatState) -> None:
         """Clear finalized context + pending so a fresh batch can be collected."""

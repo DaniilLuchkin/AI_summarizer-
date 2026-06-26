@@ -12,6 +12,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.memory import MemoryStorage
 
+from bot.commands_menu import COMMANDS
 from bot.config import Settings
 from bot.handlers import actions, collect, commands
 from bot.middleware import AccessMiddleware
@@ -61,10 +62,22 @@ async def _run() -> None:
     try:
         # Drop any updates queued while the bot was offline.
         await bot.delete_webhook(drop_pending_updates=True)
+        await setup_commands(bot)
         await dp.start_polling(bot)
     finally:
         await orclient.aclose()
         await bot.session.close()
+
+
+async def setup_commands(bot: Bot) -> None:
+    """Register the command menu: a default (English) plus per-language scopes.
+
+    A user's client shows the menu for their Telegram language; /lang overrides
+    it per chat (see handlers/commands.py).
+    """
+    await bot.set_my_commands(COMMANDS["en"])  # default fallback menu
+    for code in ("ru", "uk", "en"):
+        await bot.set_my_commands(COMMANDS[code], language_code=code)
 
 
 def main() -> None:

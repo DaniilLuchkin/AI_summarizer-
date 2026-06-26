@@ -28,8 +28,8 @@ def build_router(ctx: AppContext) -> Router:
     router = Router(name="actions")
 
     def _lang(message: Message, fallback_code: str | None) -> str:
-        chat_state = ctx.store.get(message.chat.id)
-        return chat_state.lang if chat_state else resolve_lang(fallback_code)
+        # Override > detected > caller's language_code > en.
+        return ctx.store.get_lang(message.chat.id) or resolve_lang(fallback_code)
 
     # --- Stage an action ------------------------------------------------
     @router.callback_query(F.data.startswith(ACTION_CB_PREFIX))
