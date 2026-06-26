@@ -213,7 +213,7 @@ async def _offer_save_prompt(message: Message, lang: str) -> None:
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[[InlineKeyboardButton(text=t("btn_save_prompt", lang), callback_data="save_prompt")]]
     )
-    await message.answer("💾", reply_markup=keyboard)
+    await message.answer(t("save_prompt_offer", lang), reply_markup=keyboard)
 
 
 # --- Special generators --------------------------------------------------
