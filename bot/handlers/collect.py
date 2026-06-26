@@ -145,8 +145,10 @@ async def _finalize(ctx: AppContext, chat_state: ChatState, bot: Bot) -> None:
 
     status = await bot.send_message(chat_state.chat_id, t("finalizing", lang))
 
-    # BYO-key users transcribe/OCR on their own key and bypass quotas.
+    # BYO-key users transcribe/OCR on their own key, model, and bypass quotas.
     api_key = await ctx.quota.api_key_for(user_id)
+    transcribe_model = await ctx.models.resolve(user_id, "transcribe")
+    vision_model = await ctx.models.resolve(user_id, "vision")
 
     item_texts: list[str] = []
     notes: list[str] = []
@@ -158,7 +160,7 @@ async def _finalize(ctx: AppContext, chat_state: ChatState, bot: Bot) -> None:
         name = _sender_name(msg, lang)
         try:
             text, note, item_limited = await _process_message(
-                ctx, bot, msg, index, name, user_id, api_key
+                ctx, bot, msg, index, name, user_id, api_key, transcribe_model, vision_model
             )
         except FileTooLarge:
             notes.append(t("skipped_too_large", lang).format(index=index, kind=kind))
@@ -229,7 +231,8 @@ def _kind(msg: Message) -> str:
 
 
 async def _process_message(
-    ctx: AppContext, bot: Bot, msg: Message, index: int, name: str, user_id: int, api_key: str | None
+    ctx: AppContext, bot: Bot, msg: Message, index: int, name: str, user_id: int,
+    api_key: str | None, transcribe_model: str, vision_model: str
 ) -> tuple[str | None, str | None, bool]:
     """Convert one message into a labeled context line.
 
@@ -244,7 +247,9 @@ async def _process_message(
 
     # --- Audio-bearing items: probe duration -> consume_audio -> cache/transcribe
     if msg.voice or msg.audio or msg.video_note or msg.video:
-        return await _process_audio(ctx, bot, msg, index, name, caption, lang, user_id, api_key)
+        return await _process_audio(
+            ctx, bot, msg, index, name, caption, lang, user_id, api_key, transcribe_model
+        )
 
     if msg.photo:
         largest = msg.photo[-1]
@@ -253,7 +258,7 @@ async def _process_message(
             return _label(index, name, texts.KIND_PHOTO, t("item_not_ocr", lang)), None, True
         text = await _cached_or_call(
             ctx, largest.file_unique_id, "vision",
-            lambda data: vision.describe_image(ctx.orclient, data, api_key=api_key),
+            lambda data: vision.describe_image(ctx.orclient, data, api_key=api_key, model=vision_model),
             lambda: media.download(bot, largest.file_id),
         )
         return _label(index, name, texts.KIND_PHOTO, _join(text, caption)), None, False
@@ -269,7 +274,7 @@ async def _process_message(
     return None, None, False
 
 
-async def _process_audio(ctx, bot, msg, index, name, caption, lang, user_id, api_key):
+async def _process_audio(ctx, bot, msg, index, name, caption, lang, user_id, api_key, transcribe_model):
     """Handle voice/audio/video/video_note: quota by duration, cache, transcribe."""
     if msg.voice:
         file_id, fuid, fmt, kind, is_video = msg.voice.file_id, msg.voice.file_unique_id, "ogg", texts.KIND_VOICE, False
@@ -294,7 +299,7 @@ async def _process_audio(ctx, bot, msg, index, name, caption, lang, user_id, api
         return _label(index, name, kind, _join(cached, caption)), None, False
 
     transcript = await transcribe.transcribe_media(
-        ctx.orclient, data, fmt, is_video=is_video, api_key=api_key
+        ctx.orclient, data, fmt, is_video=is_video, api_key=api_key, model=transcribe_model
     )
     if transcript is None:  # video with no audio track
         note = t("skipped_no_audio", lang).format(index=index)

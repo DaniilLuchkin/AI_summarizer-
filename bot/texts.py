@@ -70,7 +70,8 @@ TEXTS: dict[str, dict[str, str]] = {
             "• Или просто напишите свой запрос текстом — он выполнится по текущей пачке.\n\n"
             "Команды: /start, /reset, /help, /lang, /pro, /plans, /usage\n"
             "/setkey, /removekey — свой ключ OpenRouter · /prompts — сохранённые запросы\n"
-            "/invite — пригласить друзей · /privacy, /forgetme — данные"
+            "/invite — пригласить друзей · /privacy, /forgetme — данные\n"
+            "/models — выбрать модель под каждую задачу (со своим ключом /setkey)"
         ),
         "lang_choose": "Выбери язык интерфейса:",
         "lang_set": "✅ Язык интерфейса — русский.",
@@ -247,6 +248,31 @@ TEXTS: dict[str, dict[str, str]] = {
         "group_cleared": "🧹 Буфер очищен.",
         "group_ask_usage": "Использование: /ask <ваш вопрос по недавнему треду>",
         "group_media_skipped": "(+{n} медиа не учтено)",
+        # --- Per-task model selection (BYO) ---
+        "models_byo_only": (
+            "🔧 Выбор модели для каждой задачи — функция для тех, кто использует свой "
+            "ключ. Добавьте ключ OpenRouter через /setkey, затем /models позволит "
+            "выбрать модель для каждой задачи."
+        ),
+        "models_header": (
+            "🔧 Ваши модели (по задачам). Нажмите «Изменить», чтобы выбрать из списка "
+            "или ввести свой slug."
+        ),
+        "models_slot_text": "Текст",
+        "models_slot_vision": "Зрение",
+        "models_slot_transcribe": "Расшифровка",
+        "models_slot_image": "Изображение",
+        "btn_change": "Изменить",
+        "btn_custom_slug": "✏️ Ввести свой slug",
+        "btn_reset_slot": "↺ Сбросить к умолчанию",
+        "btn_reset_all": "↺ Сбросить всё к умолчаниям",
+        "models_pick_prompt": "Выберите модель для: {slot}",
+        "models_ask_slug": "Пришлите slug модели (например, openai/gpt-4o-mini):",
+        "models_set": "✅ Модель установлена: {slug}.",
+        "models_invalid": "⚠️ Не нашёл такую модель в каталоге OpenRouter. Проверьте slug и попробуйте снова.",
+        "models_modality_warn": "⚠️ Внимание: модель может не поддерживать вход/выход для этой задачи — всё равно сохранено.",
+        "models_reset_done": "↺ Возвращена модель по умолчанию для этой задачи.",
+        "models_reset_all_done": "↺ Все слоты сброшены к умолчаниям.",
     },
     # ================================================================= EN ===
     "en": {
@@ -274,7 +300,8 @@ TEXTS: dict[str, dict[str, str]] = {
             "• Or just type your prompt — it runs against the current batch.\n\n"
             "Commands: /start, /reset, /help, /lang, /pro, /plans, /usage\n"
             "/setkey, /removekey — your OpenRouter key · /prompts — saved prompts\n"
-            "/invite — refer friends · /privacy, /forgetme — your data"
+            "/invite — refer friends · /privacy, /forgetme — your data\n"
+            "/models — pick a model per task (with your own /setkey)"
         ),
         "lang_choose": "Choose interface language:",
         "lang_set": "✅ Language set to English.",
@@ -446,6 +473,31 @@ TEXTS: dict[str, dict[str, str]] = {
         "group_cleared": "🧹 Buffer cleared.",
         "group_ask_usage": "Usage: /ask <your question about the recent thread>",
         "group_media_skipped": "(+{n} media not included)",
+        # --- Per-task model selection (BYO) ---
+        "models_byo_only": (
+            "🔧 Per-task model selection is a power-user feature for bring-your-own-key "
+            "users. Add your OpenRouter key with /setkey, then /models lets you pick a "
+            "model for each task."
+        ),
+        "models_header": (
+            "🔧 Your models (per task). Tap Change to pick from a live shortlist or "
+            "enter a custom slug."
+        ),
+        "models_slot_text": "Text",
+        "models_slot_vision": "Vision",
+        "models_slot_transcribe": "Transcription",
+        "models_slot_image": "Image",
+        "btn_change": "Change",
+        "btn_custom_slug": "✏️ Enter custom slug",
+        "btn_reset_slot": "↺ Reset to default",
+        "btn_reset_all": "↺ Reset all to defaults",
+        "models_pick_prompt": "Pick a model for {slot}:",
+        "models_ask_slug": "Send the model slug (e.g. openai/gpt-4o-mini):",
+        "models_set": "✅ Model set to {slug}.",
+        "models_invalid": "⚠️ I couldn't find that model in the OpenRouter catalog. Check the slug and try again.",
+        "models_modality_warn": "⚠️ Heads up: that model may not support this task's input/output — set anyway.",
+        "models_reset_done": "↺ Reset to the default model for this task.",
+        "models_reset_all_done": "↺ All slots reset to defaults.",
     },
     # ================================================================= UK ===
     "uk": {
@@ -473,7 +525,8 @@ TEXTS: dict[str, dict[str, str]] = {
             "• Або просто напишіть свій запит текстом — він виконається за поточною пачкою.\n\n"
             "Команди: /start, /reset, /help, /lang, /pro, /plans, /usage\n"
             "/setkey, /removekey — свій ключ OpenRouter · /prompts — збережені запити\n"
-            "/invite — запросити друзів · /privacy, /forgetme — дані"
+            "/invite — запросити друзів · /privacy, /forgetme — дані\n"
+            "/models — обрати модель під кожну задачу (зі своїм ключем /setkey)"
         ),
         "lang_choose": "Обери мову інтерфейсу:",
         "lang_set": "✅ Мова інтерфейсу — українська.",
@@ -649,5 +702,30 @@ TEXTS: dict[str, dict[str, str]] = {
         "group_cleared": "🧹 Буфер очищено.",
         "group_ask_usage": "Використання: /ask <ваше питання щодо нещодавнього треду>",
         "group_media_skipped": "(+{n} медіа не враховано)",
+        # --- Per-task model selection (BYO) ---
+        "models_byo_only": (
+            "🔧 Вибір моделі для кожної задачі — функція для тих, хто використовує "
+            "власний ключ. Додайте ключ OpenRouter через /setkey, потім /models "
+            "дозволить обрати модель для кожної задачі."
+        ),
+        "models_header": (
+            "🔧 Ваші моделі (за задачами). Натисніть «Змінити», щоб обрати зі списку "
+            "або ввести власний slug."
+        ),
+        "models_slot_text": "Текст",
+        "models_slot_vision": "Зір",
+        "models_slot_transcribe": "Розшифрування",
+        "models_slot_image": "Зображення",
+        "btn_change": "Змінити",
+        "btn_custom_slug": "✏️ Ввести власний slug",
+        "btn_reset_slot": "↺ Скинути до типового",
+        "btn_reset_all": "↺ Скинути все до типового",
+        "models_pick_prompt": "Оберіть модель для: {slot}",
+        "models_ask_slug": "Надішліть slug моделі (наприклад, openai/gpt-4o-mini):",
+        "models_set": "✅ Модель встановлено: {slug}.",
+        "models_invalid": "⚠️ Не знайшов таку модель у каталозі OpenRouter. Перевірте slug і спробуйте ще раз.",
+        "models_modality_warn": "⚠️ Увага: модель може не підтримувати вхід/вихід для цієї задачі — все одно збережено.",
+        "models_reset_done": "↺ Повернено типову модель для цієї задачі.",
+        "models_reset_all_done": "↺ Усі слоти скинуто до типових.",
     },
 }

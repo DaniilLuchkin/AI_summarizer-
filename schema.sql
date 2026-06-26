@@ -40,6 +40,15 @@ CREATE TABLE IF NOT EXISTS saved_prompts (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS user_models (   -- per-task model overrides (BYO-key users)
+  telegram_id        BIGINT PRIMARY KEY,
+  model_text         TEXT,                  -- NULL = use the global default for that slot
+  model_vision       TEXT,
+  model_transcribe   TEXT,
+  model_image        TEXT,
+  updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS payments (
   id          BIGSERIAL PRIMARY KEY,
   telegram_id BIGINT NOT NULL,

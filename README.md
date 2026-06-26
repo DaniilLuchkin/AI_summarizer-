@@ -168,8 +168,12 @@ Group commands: `/summary [N]` (free, windowed), `/ask <q>` + `/actions` (Pro/BY
   daily caps and a bigger model/context. **BYO key** (`/setkey`) bypasses quotas.
 - **Payments:** `/pro` offers Telegram **Stars** (native 30-day subscription) and
   **Crypto Pay** (USDT). Both record to `payments` and notify `ADMIN_USER_ID`.
-- **Account commands:** `/usage`, `/pro`, `/setkey`, `/removekey`, `/prompts`,
-  `/invite` (referrals), `/privacy`, `/forgetme` (deletes your data).
+- **Account commands:** `/usage`, `/pro`, `/plans`, `/setkey`, `/removekey`,
+  `/prompts`, `/invite` (referrals), `/privacy`, `/forgetme` (deletes your data).
+- **Per-task models (BYO only):** `/models` lets a bring-your-own-key user pick
+  the model for each task (text / vision / transcription / image) from a live,
+  slot-filtered OpenRouter catalog (cached ~1h) or a custom slug. Overrides apply
+  only while a key is set; non-BYO users keep the global defaults.
 
 Because there's **no database/volume**, all state (batches, rate-limit
 counters, FSM) resets on redeploy — that's expected and acceptable.

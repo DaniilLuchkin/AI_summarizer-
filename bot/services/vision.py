@@ -11,6 +11,7 @@ async def describe_image(
     image_bytes: bytes,
     mime: str = "image/jpeg",
     api_key: str | None = None,
+    model: str | None = None,
 ) -> str:
     """Extract verbatim text from an image and append a short description."""
-    return await orclient.vision(image_bytes, VISION_PROMPT, mime, api_key=api_key)
+    return await orclient.vision(image_bytes, VISION_PROMPT, mime, api_key=api_key, model=model)

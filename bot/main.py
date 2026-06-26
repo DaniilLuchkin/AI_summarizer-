@@ -17,11 +17,13 @@ from aiogram.types import BotCommandScopeAllGroupChats
 from bot.commands_menu import COMMANDS, GROUP_COMMANDS
 from bot.config import Settings
 from bot.handlers import account, actions, billing, collect, commands, group
+from bot.handlers import models as models_handler
 from bot.middleware import AccessMiddleware
 from bot.runtime import AppContext
 from bot.services.batch import BatchStore
 from bot.services.db import Database
 from bot.services.group_buffer import GroupBuffer
+from bot.services.models import ModelService
 from bot.services.openrouter import OpenRouterClient
 from bot.services.quota import Quota
 from bot.services.ratelimit import RateLimiter
@@ -42,6 +44,7 @@ def build_dispatcher(ctx: AppContext) -> Dispatcher:
     dp.include_router(commands.build_router(ctx))
     dp.include_router(billing.build_router(ctx))
     dp.include_router(account.build_router(ctx))
+    dp.include_router(models_handler.build_router(ctx))
     dp.include_router(group.build_router(ctx))  # group-only; before the collector
     dp.include_router(actions.build_router(ctx))
     dp.include_router(collect.build_router(ctx))
@@ -62,14 +65,16 @@ async def _run() -> None:
     await db.connect(settings.database_url)
 
     orclient = OpenRouterClient(settings)
+    quota = Quota(db, settings)
     ctx = AppContext(
         settings=settings,
         store=BatchStore(settings.max_batch_messages, settings.max_context_chars),
         limiter=RateLimiter(settings.max_batches_per_hour, settings.max_llm_calls_per_day),
         orclient=orclient,
         db=db,
-        quota=Quota(db, settings),
+        quota=quota,
         group_buffer=GroupBuffer(settings.group_buffer_max, settings.group_buffer_ttl_hours),
+        models=ModelService(db, settings, orclient, quota),
     )
 
     bot = Bot(token=settings.telegram_bot_token, default=DefaultBotProperties())
