@@ -22,11 +22,38 @@ from aiogram.types import (
     PreCheckoutQuery,
 )
 
+from bot.handlers.run import UPGRADE_CB, build_upgrade_keyboard
 from bot.runtime import AppContext
 from bot.services.billing import CryptoPayClient, grant_pro
+from bot.config import Settings
 from bot.texts import resolve_lang, t
 
 logger = logging.getLogger(__name__)
+
+
+def _render_plans(s: Settings, lang: str) -> str:
+    """Build the Free vs Pro comparison entirely from current config values."""
+    free = t("plans_free_block", lang).format(
+        signup_audio_min=s.free_signup_audio_sec // 60,
+        signup_photos=s.free_signup_photos,
+        daily_audio_min=s.free_daily_audio_sec // 60,
+        daily_photos=s.free_daily_photos,
+        daily_llm=s.free_daily_llm_calls,
+        saved_prompts=s.free_saved_prompts,
+    )
+    pro = t("plans_pro_block", lang).format(
+        pro_audio_min=s.pro_daily_audio_sec // 60,
+        pro_photos=s.pro_daily_photos,
+        pro_llm=s.pro_daily_llm_calls,
+        pro_images=s.pro_daily_images,
+        pro_pptx=s.pro_daily_pptx,
+        pro_model=s.text_model_pro,
+        pro_context=s.max_context_chars_pro,
+    )
+    price = t("plans_price_line", lang).format(stars=s.pro_price_stars, usdt=s.pro_price_usdt)
+    return "\n\n".join(
+        [t("plans_header", lang), free, pro, t("plans_byo_line", lang), price]
+    )
 
 # Telegram only supports a fixed 30-day Stars subscription period.
 _STARS_SUB_PERIOD = 2592000
@@ -47,21 +74,53 @@ def build_router(ctx: AppContext) -> Router:
             message.from_user.language_code if message.from_user else None
         )
 
-    # --- /pro: show benefits + enabled rails ----------------------------
-    @router.message(Command("pro"))
-    async def cmd_pro(message: Message, state: FSMContext) -> None:
-        await state.clear()
-        await ctx.quota.ensure_user(message.from_user.id)
-        lang = _lang(message)
+    def _purchase_keyboard(lang: str) -> InlineKeyboardMarkup:
+        """Stars (+ crypto if enabled) purchase buttons."""
         rows = [[InlineKeyboardButton(text=t("btn_pay_stars", lang), callback_data="buy:stars")]]
         if s.crypto_pay_api_token:
             rows.append(
                 [InlineKeyboardButton(text=t("btn_pay_crypto", lang), callback_data="buy:crypto")]
             )
+        return InlineKeyboardMarkup(inline_keyboard=rows)
+
+    async def show_purchase_options(message: Message, lang: str) -> None:
+        """Shared 'choose how to pay' screen, used by /pro and the upgrade button."""
         await message.answer(
             t("pro_benefits", lang).format(stars=s.pro_price_stars, usdt=s.pro_price_usdt),
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=rows),
+            reply_markup=_purchase_keyboard(lang),
         )
+
+    # --- /pro -----------------------------------------------------------
+    @router.message(Command("pro"))
+    async def cmd_pro(message: Message, state: FSMContext) -> None:
+        await state.clear()
+        await ctx.quota.ensure_user(message.from_user.id)
+        await show_purchase_options(message, _lang(message))
+
+    # --- One-tap upgrade button (from /plans and every paywall) ---------
+    @router.callback_query(F.data == UPGRADE_CB)
+    async def on_upgrade(callback: CallbackQuery) -> None:
+        await callback.answer()
+        await ctx.quota.ensure_user(callback.from_user.id)
+        await show_purchase_options(callback.message, _lang(callback.message))
+
+    # --- /plans: tariff comparison, generated from config ---------------
+    @router.message(Command("plans"))
+    async def cmd_plans(message: Message, state: FSMContext) -> None:
+        await state.clear()
+        user = await ctx.quota.ensure_user(message.from_user.id)
+        lang = _lang(message)
+        text = _render_plans(s, lang)
+
+        if ctx.quota.is_pro(user):
+            text += "\n\n" + t("plans_pro_active", lang).format(
+                date=user["pro_until"].strftime("%Y-%m-%d")
+            )
+            await message.answer(text)
+        elif ctx.quota.has_byo(user):
+            await message.answer(text)  # BYO already unlocks everything
+        else:
+            await message.answer(text, reply_markup=build_upgrade_keyboard(lang))
 
     # --- Telegram Stars --------------------------------------------------
     @router.callback_query(F.data == "buy:stars")

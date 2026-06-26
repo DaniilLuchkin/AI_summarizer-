@@ -20,6 +20,7 @@ from aiogram.types import (
 )
 
 from bot.handlers import execute
+from bot.handlers.run import build_upgrade_keyboard
 from bot.runtime import AppContext
 from bot.texts import resolve_lang, t
 
@@ -148,7 +149,8 @@ def build_router(ctx: AppContext) -> Router:
             count = await ctx.db.prompts_count(callback.from_user.id)
             if count >= s.free_saved_prompts:
                 await callback.message.answer(
-                    t("prompts_limit", lang).format(limit=s.free_saved_prompts)
+                    t("prompts_limit", lang).format(limit=s.free_saved_prompts),
+                    reply_markup=build_upgrade_keyboard(lang),
                 )
                 return
         await ctx.db.prompt_add(callback.from_user.id, body[:_TITLE_LEN], body)

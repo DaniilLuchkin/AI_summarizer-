@@ -68,7 +68,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "• Выберите действие на клавиатуре — оно появится как команда, к которой "
             "можно добавить контекст (текст, файл или ссылку), затем «▶️ Запустить».\n"
             "• Или просто напишите свой запрос текстом — он выполнится по текущей пачке.\n\n"
-            "Команды: /start, /reset, /help, /lang, /pro, /usage\n"
+            "Команды: /start, /reset, /help, /lang, /pro, /plans, /usage\n"
             "/setkey, /removekey — свой ключ OpenRouter · /prompts — сохранённые запросы\n"
             "/invite — пригласить друзей · /privacy, /forgetme — данные"
         ),
@@ -146,12 +146,12 @@ TEXTS: dict[str, dict[str, str]] = {
         "action_image": "🎨 Картинка",
         "action_custom": "✍️ Или просто напишите свой запрос ⬇️",
         # --- Monetization / account ---
-        "paywall_image": "🎨 Генерация изображений доступна на Pro. Откройте Pro: /pro",
-        "paywall_pptx": "📊 Презентации доступны на Pro. Откройте Pro: /pro",
-        "paywall_generic": "Эта функция недоступна на текущем тарифе. Подробнее: /pro",
-        "limit_audio": "Достигнут дневной лимит расшифровки аудио. Подробнее: /pro",
-        "limit_photo": "Достигнут дневной лимит анализа фото. Подробнее: /pro",
-        "limit_llm": "🚦 Достигнут дневной лимит запросов к модели. Откройте Pro: /pro",
+        "paywall_image": "🎨 Генерация изображений доступна на Pro.",
+        "paywall_pptx": "📊 Презентации доступны на Pro.",
+        "paywall_generic": "Эта функция недоступна на текущем тарифе.",
+        "limit_audio": "Достигнут дневной лимит расшифровки аудио.",
+        "limit_photo": "Достигнут дневной лимит анализа фото.",
+        "limit_llm": "🚦 Достигнут дневной лимит запросов к модели.",
         "item_not_transcribed": "не расшифровано: достигнут дневной лимит",
         "item_not_ocr": "не распознано: достигнут дневной лимит",
         "upgrade_hint": "ℹ️ Часть элементов пропущена из-за лимитов. Больше — на Pro: /pro",
@@ -197,6 +197,35 @@ TEXTS: dict[str, dict[str, str]] = {
         ),
         "forgetme_confirm": "Удалить все ваши данные (тариф, лимиты, промпты, платежи)? Это необратимо.",
         "forgetme_done": "🗑 Готово. Все ваши данные удалены.",
+        # --- Plans / upgrade ---
+        "btn_upgrade": "⭐ Перейти на Pro",
+        "see_plans_hint": "Подробнее — /plans",
+        "plans_header": "💎 Тарифы и цены",
+        "plans_free_block": (
+            "🆓 Free\n"
+            "• Бонус при регистрации: {signup_audio_min} мин расшифровки + "
+            "{signup_photos} анализов фото (разово)\n"
+            "• В день: {daily_audio_min} мин аудио, {daily_photos} фото, "
+            "{daily_llm} текстовых действий\n"
+            "• Краткое содержание, структура, ответы, follow-up письма, задачи, перевод, PDF\n"
+            "• До {saved_prompts} сохранённых промптов\n"
+            "❌ Без генерации изображений · ❌ Без презентаций"
+        ),
+        "plans_pro_block": (
+            "⭐ Pro\n"
+            "• Всё из Free и большие дневные лимиты: {pro_audio_min} мин аудио, "
+            "{pro_photos} фото, {pro_llm} текстовых действий\n"
+            "✅ Генерация изображений (до {pro_images}/день) · "
+            "✅ Презентации (до {pro_pptx}/день)\n"
+            "• Премиум-модель ({pro_model}), больший контекст ({pro_context} симв.)\n"
+            "• Безлимит сохранённых промптов"
+        ),
+        "plans_byo_line": (
+            "🔑 Свой ключ: /setkey с вашим ключом OpenRouter → без лимитов, "
+            "все функции (вы платите за свой API)."
+        ),
+        "plans_price_line": "💳 Цена: {stars} ⭐ / мес или {usdt} USDT / мес.",
+        "plans_pro_active": "✅ У вас Pro — действует до {date}.",
     },
     # ================================================================= EN ===
     "en": {
@@ -222,7 +251,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "• Pick an action — it appears as a command you can extend with context "
             "(text, file, or link), then “▶️ Run”.\n"
             "• Or just type your prompt — it runs against the current batch.\n\n"
-            "Commands: /start, /reset, /help, /lang, /pro, /usage\n"
+            "Commands: /start, /reset, /help, /lang, /pro, /plans, /usage\n"
             "/setkey, /removekey — your OpenRouter key · /prompts — saved prompts\n"
             "/invite — refer friends · /privacy, /forgetme — your data"
         ),
@@ -296,12 +325,12 @@ TEXTS: dict[str, dict[str, str]] = {
         "action_image": "🎨 Image",
         "action_custom": "✍️ Or just type your prompt ⬇️",
         # --- Monetization / account ---
-        "paywall_image": "🎨 Image generation is a Pro feature. Unlock Pro: /pro",
-        "paywall_pptx": "📊 Presentations are a Pro feature. Unlock Pro: /pro",
-        "paywall_generic": "This feature isn't available on your plan. Details: /pro",
-        "limit_audio": "Daily audio transcription limit reached. Details: /pro",
-        "limit_photo": "Daily photo analysis limit reached. Details: /pro",
-        "limit_llm": "🚦 Daily model-request limit reached. Unlock Pro: /pro",
+        "paywall_image": "🎨 Image generation is a Pro feature.",
+        "paywall_pptx": "📊 Presentations are a Pro feature.",
+        "paywall_generic": "This feature isn't available on your plan.",
+        "limit_audio": "Daily audio transcription limit reached.",
+        "limit_photo": "Daily photo analysis limit reached.",
+        "limit_llm": "🚦 Daily model-request limit reached.",
         "item_not_transcribed": "not transcribed: daily limit reached",
         "item_not_ocr": "not analyzed: daily limit reached",
         "upgrade_hint": "ℹ️ Some items were skipped due to limits. Get more with Pro: /pro",
@@ -347,6 +376,35 @@ TEXTS: dict[str, dict[str, str]] = {
         ),
         "forgetme_confirm": "Delete all your data (plan, limits, saved prompts, payments)? This can't be undone.",
         "forgetme_done": "🗑 Done. All your data has been deleted.",
+        # --- Plans / upgrade ---
+        "btn_upgrade": "⭐ Upgrade to Pro",
+        "see_plans_hint": "See /plans for details.",
+        "plans_header": "💎 Plans & pricing",
+        "plans_free_block": (
+            "🆓 Free\n"
+            "• Signup bonus: {signup_audio_min} min transcription + "
+            "{signup_photos} photo analyses (one-time)\n"
+            "• Daily: {daily_audio_min} min audio, {daily_photos} photos, "
+            "{daily_llm} text actions\n"
+            "• Summaries, structure, replies, follow-up emails, action items, translation, PDF\n"
+            "• Up to {saved_prompts} saved prompts\n"
+            "❌ No image generation · ❌ No presentations"
+        ),
+        "plans_pro_block": (
+            "⭐ Pro\n"
+            "• Everything in Free, with higher daily caps: {pro_audio_min} min audio, "
+            "{pro_photos} photos, {pro_llm} text actions\n"
+            "✅ Image generation (up to {pro_images}/day) · "
+            "✅ Presentations (up to {pro_pptx}/day)\n"
+            "• Premium model ({pro_model}), larger context ({pro_context} chars)\n"
+            "• Unlimited saved prompts"
+        ),
+        "plans_byo_line": (
+            "🔑 Bring your own key: /setkey with your OpenRouter key → no limits, "
+            "all features (you pay your API usage)."
+        ),
+        "plans_price_line": "💳 Price: {stars} ⭐ / month or {usdt} USDT / month.",
+        "plans_pro_active": "✅ You're on Pro — valid until {date}.",
     },
     # ================================================================= UK ===
     "uk": {
@@ -372,7 +430,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "• Оберіть дію на клавіатурі — вона з'явиться як команда, до якої можна "
             "додати контекст (текст, файл або посилання), потім «▶️ Запустити».\n"
             "• Або просто напишіть свій запит текстом — він виконається за поточною пачкою.\n\n"
-            "Команди: /start, /reset, /help, /lang, /pro, /usage\n"
+            "Команди: /start, /reset, /help, /lang, /pro, /plans, /usage\n"
             "/setkey, /removekey — свій ключ OpenRouter · /prompts — збережені запити\n"
             "/invite — запросити друзів · /privacy, /forgetme — дані"
         ),
@@ -449,12 +507,12 @@ TEXTS: dict[str, dict[str, str]] = {
         "action_image": "🎨 Зображення",
         "action_custom": "✍️ Або просто напишіть свій запит ⬇️",
         # --- Monetization / account ---
-        "paywall_image": "🎨 Генерація зображень доступна на Pro. Відкрийте Pro: /pro",
-        "paywall_pptx": "📊 Презентації доступні на Pro. Відкрийте Pro: /pro",
-        "paywall_generic": "Ця функція недоступна на поточному тарифі. Деталі: /pro",
-        "limit_audio": "Досягнуто денного ліміту розшифрування аудіо. Деталі: /pro",
-        "limit_photo": "Досягнуто денного ліміту аналізу фото. Деталі: /pro",
-        "limit_llm": "🚦 Досягнуто денного ліміту запитів до моделі. Відкрийте Pro: /pro",
+        "paywall_image": "🎨 Генерація зображень доступна на Pro.",
+        "paywall_pptx": "📊 Презентації доступні на Pro.",
+        "paywall_generic": "Ця функція недоступна на поточному тарифі.",
+        "limit_audio": "Досягнуто денного ліміту розшифрування аудіо.",
+        "limit_photo": "Досягнуто денного ліміту аналізу фото.",
+        "limit_llm": "🚦 Досягнуто денного ліміту запитів до моделі.",
         "item_not_transcribed": "не розшифровано: досягнуто денного ліміту",
         "item_not_ocr": "не розпізнано: досягнуто денного ліміту",
         "upgrade_hint": "ℹ️ Частину елементів пропущено через ліміти. Більше — на Pro: /pro",
@@ -500,5 +558,34 @@ TEXTS: dict[str, dict[str, str]] = {
         ),
         "forgetme_confirm": "Видалити всі ваші дані (тариф, ліміти, промпти, платежі)? Це незворотно.",
         "forgetme_done": "🗑 Готово. Усі ваші дані видалено.",
+        # --- Plans / upgrade ---
+        "btn_upgrade": "⭐ Перейти на Pro",
+        "see_plans_hint": "Деталі — /plans",
+        "plans_header": "💎 Тарифи та ціни",
+        "plans_free_block": (
+            "🆓 Free\n"
+            "• Бонус за реєстрацію: {signup_audio_min} хв розшифрування + "
+            "{signup_photos} аналізів фото (одноразово)\n"
+            "• Щодня: {daily_audio_min} хв аудіо, {daily_photos} фото, "
+            "{daily_llm} текстових дій\n"
+            "• Короткий зміст, структура, відповіді, follow-up листи, завдання, переклад, PDF\n"
+            "• До {saved_prompts} збережених промптів\n"
+            "❌ Без генерації зображень · ❌ Без презентацій"
+        ),
+        "plans_pro_block": (
+            "⭐ Pro\n"
+            "• Усе з Free і більші денні ліміти: {pro_audio_min} хв аудіо, "
+            "{pro_photos} фото, {pro_llm} текстових дій\n"
+            "✅ Генерація зображень (до {pro_images}/день) · "
+            "✅ Презентації (до {pro_pptx}/день)\n"
+            "• Преміум-модель ({pro_model}), більший контекст ({pro_context} симв.)\n"
+            "• Безліміт збережених промптів"
+        ),
+        "plans_byo_line": (
+            "🔑 Власний ключ: /setkey з вашим ключем OpenRouter → без лімітів, "
+            "усі функції (ви платите за свій API)."
+        ),
+        "plans_price_line": "💳 Ціна: {stars} ⭐ / міс або {usdt} USDT / міс.",
+        "plans_pro_active": "✅ У вас Pro — діє до {date}.",
     },
 }
