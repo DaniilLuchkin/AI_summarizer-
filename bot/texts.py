@@ -223,11 +223,14 @@ TEXTS: dict[str, dict[str, str]] = {
             "• Безлимит сохранённых промптов"
         ),
         "plans_byo_line": (
-            "🔑 Свой ключ: /setkey с вашим ключом OpenRouter → без лимитов, "
-            "все функции (вы платите за свой API)."
+            "🔑 Свой ключ OpenRouter (альтернатива) — без подписки. Через /setkey: "
+            "вы платите только за свой API и получаете без лимитов + все функции."
         ),
-        "plans_price_line": "💳 Цена: {stars} ⭐ / мес или {usdt} USDT / мес.",
+        "plans_price_line": "💎 Pro — {stars} ⭐ / мес или {usdt} USDT / мес",
         "plans_pro_active": "✅ У вас Pro — действует до {date}.",
+        "usage_pro_active": "✅ У вас Pro — действует до {date}.",
+        "usage_byo_active": "🔑 Свой ключ активен — без лимитов.",
+        "usage_upgrade_hint": "Больше лимитов на Pro — /plans",
         # --- Group mode ---
         "group_intro": (
             "👋 Привет! Я умею делать сводку группового чата.\n\n"
@@ -463,11 +466,14 @@ TEXTS: dict[str, dict[str, str]] = {
             "• Unlimited saved prompts"
         ),
         "plans_byo_line": (
-            "🔑 Bring your own key: /setkey with your OpenRouter key → no limits, "
-            "all features (you pay your API usage)."
+            "🔑 Your own OpenRouter key (alternative) — no subscription. Use /setkey: "
+            "you pay only for your own API usage, and get no limits + all features."
         ),
-        "plans_price_line": "💳 Price: {stars} ⭐ / month or {usdt} USDT / month.",
+        "plans_price_line": "💎 Pro — {stars} ⭐ / month or {usdt} USDT / month",
         "plans_pro_active": "✅ You're on Pro — valid until {date}.",
+        "usage_pro_active": "✅ You're on Pro — valid until {date}.",
+        "usage_byo_active": "🔑 Own key active — no limits.",
+        "usage_upgrade_hint": "More limits on Pro — /plans",
         # --- Group mode ---
         "group_intro": (
             "👋 Hi! I can recap your group chat.\n\n"
@@ -705,11 +711,14 @@ TEXTS: dict[str, dict[str, str]] = {
             "• Безліміт збережених промптів"
         ),
         "plans_byo_line": (
-            "🔑 Власний ключ: /setkey з вашим ключем OpenRouter → без лімітів, "
-            "усі функції (ви платите за свій API)."
+            "🔑 Власний ключ OpenRouter (альтернатива) — без підписки. Через /setkey: "
+            "ви платите лише за свій API і отримуєте без лімітів + усі функції."
         ),
-        "plans_price_line": "💳 Ціна: {stars} ⭐ / міс або {usdt} USDT / міс.",
+        "plans_price_line": "💎 Pro — {stars} ⭐ / міс або {usdt} USDT / міс",
         "plans_pro_active": "✅ У вас Pro — діє до {date}.",
+        "usage_pro_active": "✅ У вас Pro — діє до {date}.",
+        "usage_byo_active": "🔑 Власний ключ активний — без лімітів.",
+        "usage_upgrade_hint": "Більше лімітів на Pro — /plans",
         # --- Group mode ---
         "group_intro": (
             "👋 Привіт! Я вмію робити зведення групового чату.\n\n"
