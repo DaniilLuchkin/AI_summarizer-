@@ -31,6 +31,11 @@ from bot.texts import resolve_lang, t
 logger = logging.getLogger(__name__)
 
 
+def fmt_usdt(amount: float) -> str:
+    """Render the USDT price without a trailing .0 (4.0 -> '4', 4.5 -> '4.5')."""
+    return str(int(amount)) if float(amount).is_integer() else str(amount)
+
+
 def _render_plans(s: Settings, lang: str) -> str:
     """Build the Free vs Pro comparison entirely from current config values."""
     free = t("plans_free_block", lang).format(
@@ -50,9 +55,11 @@ def _render_plans(s: Settings, lang: str) -> str:
         pro_model=s.text_model_pro,
         pro_context=s.max_context_chars_pro,
     )
-    price = t("plans_price_line", lang).format(stars=s.pro_price_stars, usdt=s.pro_price_usdt)
+    # The price is the LAST line of the Pro block (labeled Pro), so it can't be
+    # misread as belonging to the BYO-key alternative that follows.
+    price = t("plans_price_line", lang).format(stars=s.pro_price_stars, usdt=fmt_usdt(s.pro_price_usdt))
     return "\n\n".join(
-        [t("plans_header", lang), free, pro, t("plans_byo_line", lang), price]
+        [t("plans_header", lang), free, f"{pro}\n{price}", t("plans_byo_line", lang)]
     )
 
 # Telegram only supports a fixed 30-day Stars subscription period.
@@ -86,7 +93,7 @@ def build_router(ctx: AppContext) -> Router:
     async def show_purchase_options(message: Message, lang: str) -> None:
         """Shared 'choose how to pay' screen, used by /pro and the upgrade button."""
         text = (
-            t("pro_benefits", lang).format(stars=s.pro_price_stars, usdt=s.pro_price_usdt)
+            t("pro_benefits", lang).format(stars=s.pro_price_stars, usdt=fmt_usdt(s.pro_price_usdt))
             + "\n\n" + t("stars_renew_note", lang)
         )
         await message.answer(text, reply_markup=_purchase_keyboard(lang))
@@ -184,7 +191,7 @@ def build_router(ctx: AppContext) -> Router:
         )
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text=f"💳 {s.pro_price_usdt} USDT", url=pay_url)],
+                [InlineKeyboardButton(text=f"💳 {fmt_usdt(s.pro_price_usdt)} USDT", url=pay_url)],
                 [
                     InlineKeyboardButton(
                         text=t("btn_paid_check", lang),

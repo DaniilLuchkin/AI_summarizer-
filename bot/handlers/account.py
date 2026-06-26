@@ -79,19 +79,29 @@ def build_router(ctx: AppContext) -> Router:
             else (t("byo_active", lang) if r["byo"] else t("plan_free", lang))
         )
         invite = await _invite_link(bot, r["referral_code"])
-        await message.answer(
-            t("usage_report", lang).format(
-                plan=plan,
-                audio_min=r["audio_sec"] // 60,
-                photos=r["photos"],
-                llm=r["llm_calls"],
-                images=r["images"],
-                pptx=r["pptx"],
-                bonus_audio_min=r["bonus_audio_sec"] // 60,
-                bonus_photos=r["bonus_photos"],
-                invite=invite,
-            )
+        report = t("usage_report", lang).format(
+            plan=plan,
+            audio_min=r["audio_sec"] // 60,
+            photos=r["photos"],
+            llm=r["llm_calls"],
+            images=r["images"],
+            pptx=r["pptx"],
+            bonus_audio_min=r["bonus_audio_sec"] // 60,
+            bonus_photos=r["bonus_photos"],
+            invite=invite,
         )
+        # Tier-mirroring CTA at the bottom: upgrade button for free users only.
+        if r["pro"]:
+            report += "\n\n" + t("usage_pro_active", lang).format(
+                date=r["pro_until"].strftime("%Y-%m-%d")
+            )
+            await message.answer(report)
+        elif r["byo"]:
+            report += "\n\n" + t("usage_byo_active", lang)
+            await message.answer(report)
+        else:
+            report += "\n\n" + t("usage_upgrade_hint", lang)
+            await message.answer(report, reply_markup=build_upgrade_keyboard(lang))
 
     @router.message(Command("invite"))
     async def cmd_invite(message: Message, bot: Bot) -> None:
