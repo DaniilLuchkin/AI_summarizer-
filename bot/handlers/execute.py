@@ -194,7 +194,17 @@ async def run_staged(
         await run_llm(message, ctx, lang, SYSTEM_PROMPTS[action_key], content, model, api_key)
     elif action_key == "presentation":
         content = _build_action_content(document, added_text, parts)
-        await _make_presentation(message, ctx, lang, content, template, model, api_key)
+        photos = {p["id"]: p["bytes"] for p in chat_state.photos}
+        if photos:
+            content += "\n\n=== AVAILABLE PHOTOS ===\n" + "\n".join(
+                f"#{p['id']}: {_first_line(p['desc'])}" for p in chat_state.photos
+            )
+        # Append a gallery of every photo when the request asks for the images.
+        want_gallery = bool(photos) and _wants_images(added_text)
+        await _make_presentation(
+            message, ctx, lang, content, template, model, api_key,
+            photos, want_gallery, t("slides_gallery_title", lang),
+        )
     elif action_key == "pdf":
         content = _build_action_content(document, added_text, parts)
         await _make_pdf(message, ctx, lang, content, model, api_key)
@@ -216,8 +226,28 @@ async def _offer_save_prompt(message: Message, lang: str) -> None:
     await message.answer(t("save_prompt_offer", lang), reply_markup=keyboard)
 
 
+# Keywords (en/ru/uk) that signal the user wants the photos in the deck.
+_IMAGE_WORDS = (
+    "photo", "image", "picture", "pic", "foto",
+    "фото", "изображ", "картинк", "снимк", "зображ", "світлин",
+)
+
+
+def _wants_images(instruction: str) -> bool:
+    low = (instruction or "").lower()
+    return any(w in low for w in _IMAGE_WORDS)
+
+
+def _first_line(text: str) -> str:
+    line = (text or "").strip().splitlines()[0] if (text or "").strip() else ""
+    return line[:120]
+
+
 # --- Special generators --------------------------------------------------
-async def _make_presentation(message, ctx, lang, content, template, model, api_key):
+async def _make_presentation(
+    message, ctx, lang, content, template, model, api_key,
+    photos=None, gallery=False, gallery_title="Images",
+):
     status = await message.answer(t("building_presentation", lang))
     try:
         raw = await ctx.orclient.chat(
@@ -225,7 +255,9 @@ async def _make_presentation(message, ctx, lang, content, template, model, api_k
             model=model, api_key=api_key,
         )
         data = await asyncio.to_thread(pptx_builder.parse_slides, raw)
-        pptx_bytes = await asyncio.to_thread(pptx_builder.build_pptx, data, template)
+        pptx_bytes = await asyncio.to_thread(
+            pptx_builder.build_pptx, data, template, photos, gallery, gallery_title
+        )
         await message.answer_document(
             BufferedInputFile(pptx_bytes, filename="presentation.pptx"),
             caption=t("presentation_caption", lang),

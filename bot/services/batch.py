@@ -35,6 +35,9 @@ class ChatState:
     limit_notified: bool = False
     # Last custom-prompt instruction (for the 💾 Save prompt button).
     last_custom_prompt: str | None = None
+    # Forwarded photos kept for reuse on slides: [{id, bytes, mime, desc}].
+    # Image bytes are in-memory only; capped (see BatchStore.retain_photo).
+    photos: list[dict] = field(default_factory=list)
 
     @property
     def has_active_batch(self) -> bool:
@@ -58,6 +61,19 @@ class BatchStore:
             state = ChatState(chat_id=chat_id)
             self._states[chat_id] = state
         return state
+
+    # Cap combined retained image bytes per chat to bound memory.
+    PHOTO_RETAIN_MAX_BYTES = 15 * 1024 * 1024
+
+    def retain_photo(self, state: ChatState, data: bytes, mime: str, desc: str) -> int | None:
+        """Keep a photo's bytes for slide reuse. Returns its 1-based id, or None
+        if adding it would exceed the per-chat memory cap (then it's not kept)."""
+        used = sum(len(p["bytes"]) for p in state.photos)
+        if used + len(data) > self.PHOTO_RETAIN_MAX_BYTES:
+            return None
+        photo_id = len(state.photos) + 1
+        state.photos.append({"id": photo_id, "bytes": data, "mime": mime, "desc": desc})
+        return photo_id
 
     def add_pending(self, state: ChatState, message: Message) -> bool:
         """Append a message to the pending batch.
@@ -102,6 +118,7 @@ class BatchStore:
             state.debounce_task.cancel()
         state.pending = []
         state.item_texts = []
+        state.photos = []
         state.dropped = 0
         state.limit_notified = False
         state.debounce_task = None
@@ -110,6 +127,7 @@ class BatchStore:
         """Clear finalized context + pending so a fresh batch can be collected."""
         state.item_texts = []
         state.pending = []
+        state.photos = []
         state.dropped = 0
         state.limit_notified = False
 
