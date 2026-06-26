@@ -68,6 +68,13 @@ class Settings(BaseSettings):
     model_text_pro: str = ""  # defaults to model_text when empty
     max_context_chars_pro: int = 120000
 
+    # --- Presentations (deck planning + visual QA) -----------------------
+    model_deck: str = ""       # strong planning model; defaults to text_model_pro
+    model_qa_vision: str = ""  # QA defect detector; defaults to model_vision
+    deck_qa_enabled: bool = True
+    deck_qa_max_passes: int = 1   # detect->fix cycles (hard-capped at 2)
+    deck_qa_max_slides: int = 15  # cap slides inspected by the vision QA
+
     # --- Billing ----------------------------------------------------------
     crypto_pay_api_token: str = ""  # empty -> hide crypto rail
     pro_price_stars: int = 250
@@ -110,6 +117,16 @@ class Settings(BaseSettings):
     def text_model_pro(self) -> str:
         """Pro text model, falling back to the standard one if unset."""
         return self.model_text_pro or self.model_text
+
+    @property
+    def deck_model(self) -> str:
+        """Strong deck-planning model, falling back to the Pro text model."""
+        return self.model_deck or self.text_model_pro
+
+    @property
+    def qa_vision_model(self) -> str:
+        """QA defect-detection vision model, falling back to the vision model."""
+        return self.model_qa_vision or self.model_vision
 
     @cached_property
     def allowed_ids(self) -> set[int]:

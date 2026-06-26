@@ -21,12 +21,14 @@ from aiogram.types import (
 from bot.handlers.run import build_actions_keyboard, build_upgrade_keyboard, run_llm
 from bot.prompts import (
     CUSTOM_SYSTEM,
+    DECK_PLAN_SYSTEM,
+    DECK_QA_SYSTEM,
     IMAGE_PROMPT_SYSTEM,
     PDF_SYSTEM,
-    PRESENTATION_SYSTEM,
     SYSTEM_PROMPTS,
     TEXT_ACTION_KEYS,
 )
+from bot.services import deck_design, deck_qa
 from bot.runtime import AppContext
 from bot.services import context as context_service
 from bot.services import media, pdf_builder, pptx_builder
@@ -199,10 +201,9 @@ async def run_staged(
             content += "\n\n=== AVAILABLE PHOTOS ===\n" + "\n".join(
                 f"#{p['id']}: {_first_line(p['desc'])}" for p in chat_state.photos
             )
-        # Append a gallery of every photo when the request asks for the images.
         want_gallery = bool(photos) and _wants_images(added_text)
         await _make_presentation(
-            message, ctx, lang, content, template, model, api_key,
+            message, ctx, lang, content, template, api_key, user_id,
             photos, want_gallery, t("slides_gallery_title", lang),
         )
     elif action_key == "pdf":
@@ -245,19 +246,38 @@ def _first_line(text: str) -> str:
 
 # --- Special generators --------------------------------------------------
 async def _make_presentation(
-    message, ctx, lang, content, template, model, api_key,
-    photos=None, gallery=False, gallery_title="Images",
+    message, ctx, lang, content, template, api_key, user_id,
+    photos=None, want_gallery=False, gallery_title="Images",
 ):
+    photos = photos or {}
+    s = ctx.settings
     status = await message.answer(t("building_presentation", lang))
     try:
+        # 1) Plan the deck with the strong planning model (BYO key if set).
         raw = await ctx.orclient.chat(
-            [{"role": "system", "content": PRESENTATION_SYSTEM}, {"role": "user", "content": content}],
-            model=model, api_key=api_key,
+            [{"role": "system", "content": DECK_PLAN_SYSTEM}, {"role": "user", "content": content}],
+            model=s.deck_model, api_key=api_key,
         )
-        data = await asyncio.to_thread(pptx_builder.parse_slides, raw)
-        pptx_bytes = await asyncio.to_thread(
-            pptx_builder.build_pptx, data, template, photos, gallery, gallery_title
-        )
+        plan = await asyncio.to_thread(pptx_builder.parse_slides, raw)
+        plan = deck_design.normalize_plan(plan)
+        _append_photo_gallery(plan, photos, want_gallery, gallery_title)
+
+        if template:
+            # Template mode: keep the company theme/layouts; column logic keeps
+            # text and images apart, so we skip the render-based QA loop.
+            pptx_bytes = await asyncio.to_thread(
+                pptx_builder.build_pptx,
+                pptx_builder.flatten_for_template(plan), template, photos, False, gallery_title,
+            )
+        else:
+            pptx_bytes = await asyncio.to_thread(pptx_builder.build_design, plan, photos, {})
+            if s.deck_qa_enabled:
+                try:
+                    await status.edit_text(t("deck_polishing", lang))
+                except Exception:  # noqa: BLE001 - status edit is cosmetic
+                    pass
+                pptx_bytes = await _polish_deck(ctx, plan, photos, api_key, user_id, pptx_bytes)
+
         await message.answer_document(
             BufferedInputFile(pptx_bytes, filename="presentation.pptx"),
             caption=t("presentation_caption", lang),
@@ -267,6 +287,38 @@ async def _make_presentation(
         await message.answer(t("presentation_failed", lang))
     finally:
         await _safe_delete(status)
+
+
+def _append_photo_gallery(plan: dict, photos: dict, want_gallery: bool, title: str) -> None:
+    """When the user asked for the photos, ensure every unreferenced one appears."""
+    if not (want_gallery and photos):
+        return
+    referenced = {s.get("image_ref") for s in plan["slides"] if isinstance(s.get("image_ref"), int)}
+    for pid in sorted(photos):
+        if pid not in referenced:
+            plan["slides"].append({"layout": "image_feature", "title": title, "image_ref": pid})
+
+
+async def _polish_deck(ctx, plan, photos, api_key, user_id, deck_bytes):
+    """Run the bounded visual-QA loop; on any failure ship the input deck."""
+    s = ctx.settings
+
+    async def detect_slide(slide_no: int, jpg: bytes) -> str:
+        # QA vision calls count toward usage like other calls (best-effort).
+        try:
+            await ctx.quota.consume_llm_call(user_id)
+        except Exception:  # noqa: BLE001
+            pass
+        prompt = f"{DECK_QA_SYSTEM}\nThis is slide {slide_no} of the deck."
+        return await ctx.orclient.vision(jpg, prompt, "image/jpeg", api_key=api_key, model=s.qa_vision_model)
+
+    def rebuild(overrides: dict) -> bytes:
+        return pptx_builder.build_design(plan, photos, overrides)
+
+    return await deck_qa.polish(
+        deck_bytes=deck_bytes, rebuild=rebuild, detect_slide=detect_slide,
+        max_passes=s.deck_qa_max_passes, max_slides=s.deck_qa_max_slides,
+    )
     await _resend_keyboard(message, lang)
 
 

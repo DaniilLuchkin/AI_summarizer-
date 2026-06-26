@@ -129,6 +129,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "Попробуйте через ~{hours} ч."
         ),
         "building_presentation": "📊 Собираю презентацию…",
+        "deck_polishing": "✨ Полирую презентацию…",
         "building_pdf": "📄 Собираю PDF…",
         "building_image": "🎨 Генерирую изображение…",
         "presentation_caption": "📊 Презентация готова.",
@@ -374,6 +375,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "🚦 Model request limit reached ({limit}/day). Try again in ~{hours} h."
         ),
         "building_presentation": "📊 Building the presentation…",
+        "deck_polishing": "✨ Polishing your deck…",
         "building_pdf": "📄 Building the PDF…",
         "building_image": "🎨 Generating the image…",
         "presentation_caption": "📊 Presentation ready.",
@@ -620,6 +622,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "Спробуйте за ~{hours} год."
         ),
         "building_presentation": "📊 Збираю презентацію…",
+        "deck_polishing": "✨ Полірую презентацію…",
         "building_pdf": "📄 Збираю PDF…",
         "building_image": "🎨 Генерую зображення…",
         "presentation_caption": "📊 Презентація готова.",
