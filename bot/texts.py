@@ -226,6 +226,27 @@ TEXTS: dict[str, dict[str, str]] = {
         ),
         "plans_price_line": "💳 Цена: {stars} ⭐ / мес или {usdt} USDT / мес.",
         "plans_pro_active": "✅ У вас Pro — действует до {date}.",
+        # --- Group mode ---
+        "group_intro": (
+            "👋 Привет! Я умею делать сводку группового чата.\n\n"
+            "• /summary [N] — кратко о последних N сообщениях\n"
+            "• /ask <вопрос> и /actions — функции Pro\n"
+            "• /clear — админы очищают мой буфер\n\n"
+            "🔒 Я храню только короткий буфер последних сообщений в памяти "
+            "(ограниченный, с авто-истечением) — ничего про эту группу не сохраняется. "
+            "Я вижу только сообщения, отправленные *после* того, как я вошёл "
+            "(режим приватности должен быть выключен)."
+        ),
+        "group_summary_empty": (
+            "Пока нечего обобщать — я вижу только сообщения после моего входа. "
+            "Убедитесь, что режим приватности выключен (BotFather → /setprivacy → "
+            "Disable), и добавьте меня заново."
+        ),
+        "group_cooldown": "⏳ Чуть помедленнее — я только что делал сводку. Попробуйте через несколько секунд.",
+        "group_admins_only": "Очистить буфер могут только администраторы группы.",
+        "group_cleared": "🧹 Буфер очищен.",
+        "group_ask_usage": "Использование: /ask <ваш вопрос по недавнему треду>",
+        "group_media_skipped": "(+{n} медиа не учтено)",
     },
     # ================================================================= EN ===
     "en": {
@@ -405,6 +426,26 @@ TEXTS: dict[str, dict[str, str]] = {
         ),
         "plans_price_line": "💳 Price: {stars} ⭐ / month or {usdt} USDT / month.",
         "plans_pro_active": "✅ You're on Pro — valid until {date}.",
+        # --- Group mode ---
+        "group_intro": (
+            "👋 Hi! I can recap your group chat.\n\n"
+            "• /summary [N] — summarize the last N messages\n"
+            "• /ask <question> and /actions — Pro features\n"
+            "• /clear — admins wipe my buffer\n\n"
+            "🔒 I keep only a short, in-memory buffer of recent messages (capped, "
+            "auto-expiring) — nothing about this group is stored. I can only see "
+            "messages sent *after* I joined (privacy mode must be off)."
+        ),
+        "group_summary_empty": (
+            "Nothing buffered yet — I only see messages sent after I joined. Make "
+            "sure my privacy mode is disabled (BotFather → /setprivacy → Disable), "
+            "then re-add me."
+        ),
+        "group_cooldown": "⏳ Slow down a moment — I just summarized. Try again in a few seconds.",
+        "group_admins_only": "Only group admins can clear my buffer.",
+        "group_cleared": "🧹 Buffer cleared.",
+        "group_ask_usage": "Usage: /ask <your question about the recent thread>",
+        "group_media_skipped": "(+{n} media not included)",
     },
     # ================================================================= UK ===
     "uk": {
@@ -587,5 +628,26 @@ TEXTS: dict[str, dict[str, str]] = {
         ),
         "plans_price_line": "💳 Ціна: {stars} ⭐ / міс або {usdt} USDT / міс.",
         "plans_pro_active": "✅ У вас Pro — діє до {date}.",
+        # --- Group mode ---
+        "group_intro": (
+            "👋 Привіт! Я вмію робити зведення групового чату.\n\n"
+            "• /summary [N] — стисло про останні N повідомлень\n"
+            "• /ask <питання> та /actions — функції Pro\n"
+            "• /clear — адміни очищають мій буфер\n\n"
+            "🔒 Я зберігаю лише короткий буфер останніх повідомлень у пам'яті "
+            "(обмежений, з авто-завершенням) — нічого про цю групу не зберігається. "
+            "Я бачу лише повідомлення, надіслані *після* мого входу "
+            "(режим приватності має бути вимкнений)."
+        ),
+        "group_summary_empty": (
+            "Поки нічого узагальнювати — я бачу лише повідомлення після мого входу. "
+            "Переконайтеся, що режим приватності вимкнено (BotFather → /setprivacy → "
+            "Disable), і додайте мене знову."
+        ),
+        "group_cooldown": "⏳ Трохи повільніше — я щойно робив зведення. Спробуйте за кілька секунд.",
+        "group_admins_only": "Очистити буфер можуть лише адміністратори групи.",
+        "group_cleared": "🧹 Буфер очищено.",
+        "group_ask_usage": "Використання: /ask <ваше питання щодо нещодавнього треду>",
+        "group_media_skipped": "(+{n} медіа не враховано)",
     },
 }

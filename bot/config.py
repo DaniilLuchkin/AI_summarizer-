@@ -95,6 +95,14 @@ class Settings(BaseSettings):
     referral_bonus_audio_sec: int = 300
     referral_bonus_photos: int = 5
 
+    # --- Group mode (in-memory thread buffer) ----------------------------
+    group_buffer_max: int = 300          # messages kept per group chat
+    group_buffer_ttl_hours: int = 24     # older messages are pruned
+    group_summary_default: int = 50      # default N for /summary
+    group_window_free: int = 80          # max messages summarized (free)
+    group_window_pro: int = 400          # max messages summarized (Pro/BYO)
+    group_cooldown_sec: int = 30         # min seconds between group LLM commands
+
     # --- Logging ----------------------------------------------------------
     log_level: str = "INFO"
 
