@@ -74,7 +74,7 @@ async def handle_incoming(ctx: AppContext, message: Message, state: FSMContext, 
 
     # Typed text against an already-finalized batch -> custom prompt (no tap).
     if chat_state.has_active_batch and _is_plain_text(message):
-        await execute.run_typed_custom(ctx, message, bot, chat_state.lang)
+        await execute.run_typed_custom(ctx, message, bot, ctx.store.lang_for(message))
         return
 
     # A fresh message after a finalized batch starts a new batch.
@@ -82,15 +82,17 @@ async def handle_incoming(ctx: AppContext, message: Message, state: FSMContext, 
         ctx.store.start_new_batch(chat_state)
         await state.clear()
 
-    # Set/refresh the UI language at the start of each new batch.
+    # Refresh the auto-detected language at the start of each new batch
+    # (a manual /lang override still wins via get_lang/lang_for).
     if not chat_state.pending:
-        chat_state.lang = resolve_lang(message.from_user.language_code)
+        ctx.store.set_lang(message.chat.id, resolve_lang(message.from_user.language_code))
 
+    lang = ctx.store.lang_for(message)
     added = ctx.store.add_pending(chat_state, message)
     if not added and not chat_state.limit_notified:
         chat_state.limit_notified = True
         await message.answer(
-            t("batch_limit_reached", chat_state.lang).format(limit=ctx.settings.max_batch_messages)
+            t("batch_limit_reached", lang).format(limit=ctx.settings.max_batch_messages)
         )
 
     _reschedule_finalize(ctx, chat_state, bot)
@@ -113,7 +115,8 @@ async def _debounce(ctx: AppContext, chat_state: ChatState, bot: Bot) -> None:
     except Exception:  # noqa: BLE001 - background task must never propagate
         logger.exception("Finalize failed for chat %s", chat_state.chat_id)
         try:
-            await bot.send_message(chat_state.chat_id, t("generic_error", chat_state.lang))
+            lang = ctx.store.get_lang(chat_state.chat_id) or "en"
+            await bot.send_message(chat_state.chat_id, t("generic_error", lang))
         except Exception:  # noqa: BLE001
             pass
 
@@ -125,7 +128,7 @@ async def _finalize(ctx: AppContext, chat_state: ChatState, bot: Bot) -> None:
     if not pending:
         return
 
-    lang = chat_state.lang
+    lang = ctx.store.get_lang(chat_state.chat_id) or "en"
     user_id = pending[0].from_user.id if pending[0].from_user else 0
 
     allowed, reset_in = ctx.limiter.check_batch(user_id)
@@ -216,7 +219,7 @@ async def _process_message(
 ) -> tuple[str | None, str | None]:
     """Convert one message into a labeled context line."""
     caption = (msg.caption or "").strip()
-    lang = ctx.store.get_or_create(msg.chat.id).lang
+    lang = ctx.store.get_lang(msg.chat.id) or "en"
 
     if msg.text:
         return _label(index, name, texts.KIND_TEXT, msg.text.strip()), None

@@ -58,6 +58,19 @@ TEXTS: dict[str, dict[str, str]] = {
             "Команды:\n/reset — очистить пачку\n/start — показать справку"
         ),
         "reset_done": "🧹 Пачка очищена. Присылайте новые сообщения.",
+        "help": (
+            "ℹ️ Как это работает:\n"
+            "• Перешлите или отправьте несколько сообщений подряд (текст, голосовые, "
+            "кружочки, видео, аудио, документы, фото).\n"
+            "• Я расшифрую медиа, распознаю текст с картинок и соберу всё в один "
+            "документ с именами отправителей.\n"
+            "• Выберите действие на клавиатуре — оно появится как команда, к которой "
+            "можно добавить контекст (текст, файл или ссылку), затем «▶️ Запустить».\n"
+            "• Или просто напишите свой запрос текстом — он выполнится по текущей пачке.\n\n"
+            "Команды: /start, /reset, /help, /lang"
+        ),
+        "lang_choose": "Выбери язык интерфейса:",
+        "lang_set": "✅ Язык интерфейса — русский.",
         "finalizing": "🛠 Обрабатываю пачку (расшифровка, распознавание)…",
         "empty_batch": "Пачка пустая — нечего обрабатывать.",
         "batch_ready": "✅ Пачка готова. Что сделать?",
@@ -144,6 +157,19 @@ TEXTS: dict[str, dict[str, str]] = {
             "Commands:\n/reset — clear the batch\n/start — show this help"
         ),
         "reset_done": "🧹 Batch cleared. Send new messages.",
+        "help": (
+            "ℹ️ How it works:\n"
+            "• Forward or send several messages in a row (text, voice, video notes, "
+            "videos, audio, documents, photos).\n"
+            "• I transcribe media, OCR images and assemble one document labeled with "
+            "sender names.\n"
+            "• Pick an action — it appears as a command you can extend with context "
+            "(text, file, or link), then “▶️ Run”.\n"
+            "• Or just type your prompt — it runs against the current batch.\n\n"
+            "Commands: /start, /reset, /help, /lang"
+        ),
+        "lang_choose": "Choose interface language:",
+        "lang_set": "✅ Language set to English.",
         "finalizing": "🛠 Processing the batch (transcription, OCR)…",
         "empty_batch": "The batch is empty — nothing to process.",
         "batch_ready": "✅ Batch ready. What should I do?",
@@ -226,6 +252,19 @@ TEXTS: dict[str, dict[str, str]] = {
             "Команди:\n/reset — очистити пачку\n/start — показати довідку"
         ),
         "reset_done": "🧹 Пачку очищено. Надсилайте нові повідомлення.",
+        "help": (
+            "ℹ️ Як це працює:\n"
+            "• Перешліть або надішліть кілька повідомлень поспіль (текст, голосові, "
+            "кружечки, відео, аудіо, документи, фото).\n"
+            "• Я розшифрую медіа, розпізнаю текст із зображень і зберу все в один "
+            "документ з іменами відправників.\n"
+            "• Оберіть дію на клавіатурі — вона з'явиться як команда, до якої можна "
+            "додати контекст (текст, файл або посилання), потім «▶️ Запустити».\n"
+            "• Або просто напишіть свій запит текстом — він виконається за поточною пачкою.\n\n"
+            "Команди: /start, /reset, /help, /lang"
+        ),
+        "lang_choose": "Обери мову інтерфейсу:",
+        "lang_set": "✅ Мова інтерфейсу — українська.",
         "finalizing": "🛠 Обробляю пачку (розшифрування, розпізнавання)…",
         "empty_batch": "Пачка порожня — немає що обробляти.",
         "batch_ready": "✅ Пачка готова. Що зробити?",
