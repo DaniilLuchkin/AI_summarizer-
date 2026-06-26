@@ -11,9 +11,14 @@ import asyncio
 import logging
 
 from aiogram import Bot
-from aiogram.types import BufferedInputFile, Message
+from aiogram.types import (
+    BufferedInputFile,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+)
 
-from bot.handlers.run import build_actions_keyboard, check_llm_limit, run_llm
+from bot.handlers.run import build_actions_keyboard, run_llm
 from bot.prompts import (
     CUSTOM_SYSTEM,
     IMAGE_PROMPT_SYSTEM,
@@ -33,6 +38,18 @@ logger = logging.getLogger(__name__)
 MAX_LINKS = 3
 _CAPTION_LIMIT = 1024
 _PPTX_EXTS = (".pptx", ".potx")
+
+# Maps a quota reason code to a localized message key.
+_LIMIT_TEXT = {
+    "llm": "limit_llm",
+    "image": "paywall_image",
+    "pptx": "paywall_pptx",
+    "generic": "paywall_generic",
+}
+
+
+def _limit_message(reason: str | None, lang: str) -> str:
+    return t(_LIMIT_TEXT.get(reason or "generic", "paywall_generic"), lang)
 
 
 # --- Context gathering ---------------------------------------------------
@@ -118,41 +135,67 @@ async def run_staged(
     user_id: int,
     action_key: str,
     source_message: Message | None,
+    preset_instruction: str | None = None,
 ) -> None:
-    """Run a staged action. `source_message` (if any) supplies optional context."""
+    """Run a staged action, applying quotas/feature gates and BYO key/model.
+
+    `source_message` supplies optional context; `preset_instruction` is used by
+    saved prompts (a fixed custom instruction with no source message).
+    """
     chat_state = ctx.store.get(message.chat.id)
     if chat_state is None or not chat_state.has_active_batch:
         await message.answer(t("no_active_batch", lang))
         return
 
-    document, truncated = ctx.store.assemble_for_llm(chat_state)
+    cap = await ctx.quota.context_cap_for(user_id)
+    document, truncated = ctx.store.assemble_for_llm(chat_state, cap)
     if truncated:
         await message.answer(t("context_truncated", lang))
 
     added_text = ""
     parts: list[str] = []
     template: bytes | None = None
-    if source_message is not None:
+    if preset_instruction is not None:
+        added_text = preset_instruction
+    elif source_message is not None:
         added_text = (source_message.text or source_message.caption or "").strip()
         parts, template = await collect_context(ctx, bot, source_message, lang)
 
-    if action_key == "custom":
-        content = _build_custom_content(document, added_text, parts)
-        await run_llm(message, ctx, user_id, lang, CUSTOM_SYSTEM, content)
-    elif action_key in TEXT_ACTION_KEYS:
-        content = _build_action_content(document, added_text, parts)
-        await run_llm(message, ctx, user_id, lang, SYSTEM_PROMPTS[action_key], content)
+    # --- Quota / feature gate (the paywall appears at the moment of value) ---
+    if action_key == "custom" or action_key in TEXT_ACTION_KEYS or action_key == "pdf":
+        ok, reason = await ctx.quota.consume_llm_call(user_id)
     elif action_key == "presentation":
-        content = _build_action_content(document, added_text, parts)
-        await _make_presentation(message, ctx, user_id, lang, content, template)
-    elif action_key == "pdf":
-        content = _build_action_content(document, added_text, parts)
-        await _make_pdf(message, ctx, user_id, lang, content)
+        ok, reason = await ctx.quota.require_pptx(user_id)
     elif action_key == "image":
-        content = _build_action_content(document, added_text, parts)
-        await _make_image(message, ctx, user_id, lang, content)
+        ok, reason = await ctx.quota.require_image(user_id)
     else:
         await message.answer(t("generic_error", lang))
+        return
+    if not ok:
+        await message.answer(_limit_message(reason, lang))
+        return
+
+    api_key = await ctx.quota.api_key_for(user_id)
+    model = await ctx.quota.model_for(user_id)
+
+    if action_key == "custom":
+        content = _build_custom_content(document, added_text, parts)
+        chat_state.last_custom_prompt = added_text.strip() or None
+        await run_llm(message, ctx, lang, CUSTOM_SYSTEM, content, model, api_key)
+        if chat_state.last_custom_prompt:
+            await _offer_save_prompt(message, lang)
+    elif action_key in TEXT_ACTION_KEYS:
+        content = _build_action_content(document, added_text, parts)
+        await run_llm(message, ctx, lang, SYSTEM_PROMPTS[action_key], content, model, api_key)
+    elif action_key == "presentation":
+        content = _build_action_content(document, added_text, parts)
+        await _make_presentation(message, ctx, lang, content, template, model, api_key)
+    elif action_key == "pdf":
+        content = _build_action_content(document, added_text, parts)
+        await _make_pdf(message, ctx, lang, content, model, api_key)
+    elif action_key == "image":
+        content = _build_action_content(document, added_text, parts)
+        await _make_image(message, ctx, lang, content, model, api_key)
 
 
 async def run_typed_custom(ctx: AppContext, message: Message, bot: Bot, lang: str) -> None:
@@ -160,16 +203,21 @@ async def run_typed_custom(ctx: AppContext, message: Message, bot: Bot, lang: st
     await run_staged(ctx, message, bot, lang, message.from_user.id, "custom", source_message=message)
 
 
+async def _offer_save_prompt(message: Message, lang: str) -> None:
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[[InlineKeyboardButton(text=t("btn_save_prompt", lang), callback_data="save_prompt")]]
+    )
+    await message.answer("💾", reply_markup=keyboard)
+
+
 # --- Special generators --------------------------------------------------
-async def _make_presentation(message, ctx, user_id, lang, content, template):
-    if not await check_llm_limit(message, ctx, user_id, lang):
-        return
+async def _make_presentation(message, ctx, lang, content, template, model, api_key):
     status = await message.answer(t("building_presentation", lang))
     try:
         raw = await ctx.orclient.chat(
-            [{"role": "system", "content": PRESENTATION_SYSTEM}, {"role": "user", "content": content}]
+            [{"role": "system", "content": PRESENTATION_SYSTEM}, {"role": "user", "content": content}],
+            model=model, api_key=api_key,
         )
-        ctx.limiter.record_llm(user_id)
         data = await asyncio.to_thread(pptx_builder.parse_slides, raw)
         pptx_bytes = await asyncio.to_thread(pptx_builder.build_pptx, data, template)
         await message.answer_document(
@@ -184,15 +232,13 @@ async def _make_presentation(message, ctx, user_id, lang, content, template):
     await _resend_keyboard(message, lang)
 
 
-async def _make_pdf(message, ctx, user_id, lang, content):
-    if not await check_llm_limit(message, ctx, user_id, lang):
-        return
+async def _make_pdf(message, ctx, lang, content, model, api_key):
     status = await message.answer(t("building_pdf", lang))
     try:
         raw = await ctx.orclient.chat(
-            [{"role": "system", "content": PDF_SYSTEM}, {"role": "user", "content": content}]
+            [{"role": "system", "content": PDF_SYSTEM}, {"role": "user", "content": content}],
+            model=model, api_key=api_key,
         )
-        ctx.limiter.record_llm(user_id)
         pdf_bytes = await asyncio.to_thread(pdf_builder.build_pdf, raw)
         await message.answer_document(
             BufferedInputFile(pdf_bytes, filename="result.pdf"), caption=t("pdf_caption", lang)
@@ -205,17 +251,15 @@ async def _make_pdf(message, ctx, user_id, lang, content):
     await _resend_keyboard(message, lang)
 
 
-async def _make_image(message, ctx, user_id, lang, content):
-    if not await check_llm_limit(message, ctx, user_id, lang):
-        return
+async def _make_image(message, ctx, lang, content, model, api_key):
     status = await message.answer(t("building_image", lang))
     try:
         prompt = await ctx.orclient.chat(
-            [{"role": "system", "content": IMAGE_PROMPT_SYSTEM}, {"role": "user", "content": content}]
+            [{"role": "system", "content": IMAGE_PROMPT_SYSTEM}, {"role": "user", "content": content}],
+            model=model, api_key=api_key,
         )
         prompt = prompt.strip()
-        image_bytes = await ctx.orclient.generate_image(prompt)
-        ctx.limiter.record_llm(user_id)
+        image_bytes = await ctx.orclient.generate_image(prompt, api_key=api_key)
         await message.answer_photo(
             BufferedInputFile(image_bytes, filename="image.jpg"), caption=prompt[:_CAPTION_LIMIT]
         )

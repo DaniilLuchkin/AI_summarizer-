@@ -94,12 +94,17 @@ python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# 3. Configure
+# 3. Postgres (required) — e.g. via Docker
+docker run -d --name forwardly-pg -e POSTGRES_PASSWORD=pg -p 5432:5432 postgres:16
+#    then set DATABASE_URL=postgresql://postgres:pg@localhost:5432/postgres
+
+# 4. Configure
 cp .env.example .env
-#    edit .env: set TELEGRAM_BOT_TOKEN and OPENROUTER_API_KEY,
+#    edit .env: set TELEGRAM_BOT_TOKEN, OPENROUTER_API_KEY, DATABASE_URL, APP_SECRET
+#    (APP_SECRET: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
 #    and CONFIRM the MODEL_* slugs at https://openrouter.ai/models
 
-# 4. Run
+# 5. Run
 python -m bot.main
 ```
 
@@ -117,13 +122,29 @@ This bot runs as a **worker** (outbound only, no HTTP port).
 1. Push this repo to GitHub.
 2. In Railway: **New Project → Deploy from GitHub repo**, pick this repo.
    Railway auto-detects the `Dockerfile` (which installs `ffmpeg`).
-3. Open the service → **Variables** and add the values from `.env.example`:
+3. **Add the Postgres plugin** (New → Database → PostgreSQL). Railway injects
+   `DATABASE_URL` automatically — the bot **requires** it and won't start without it.
+4. Open the service → **Variables** and add the values from `.env.example`:
    - `TELEGRAM_BOT_TOKEN`
    - `OPENROUTER_API_KEY`
    - `MODEL_TEXT`, `MODEL_VISION`, `MODEL_TRANSCRIBE`, `MODEL_IMAGE` *(confirm slugs first)*
+   - `APP_SECRET` *(Fernet key — see `.env.example`; needed for bring-your-own-key)*
+   - billing/quota vars (`PRO_PRICE_STARS`, `CRYPTO_PAY_API_TOKEN`, `ADMIN_USER_ID`, …)
    - any tuning/guardrail vars you want to override
    *(Do **not** set a `PORT`; this is a worker, not a web service.)*
-4. Deploy. Watch **Logs** for `Starting polling`.
+5. Deploy. Watch **Logs** for `Schema applied` then `Starting polling`.
+
+### Monetization & persistence layer
+- **Postgres** (asyncpg, no ORM) stores only durable data: users/quotas, Pro
+  status, encrypted BYO keys, saved prompts, payments, and a media cache. The
+  batch session stays in memory. `schema.sql` is applied idempotently on startup.
+- **Free vs Pro:** free tier has a one-time signup bonus + daily audio/photo/LLM
+  allowances; 🎨 images and 📊 presentations are Pro-only. Pro has cost-bounded
+  daily caps and a bigger model/context. **BYO key** (`/setkey`) bypasses quotas.
+- **Payments:** `/pro` offers Telegram **Stars** (native 30-day subscription) and
+  **Crypto Pay** (USDT). Both record to `payments` and notify `ADMIN_USER_ID`.
+- **Account commands:** `/usage`, `/pro`, `/setkey`, `/removekey`, `/prompts`,
+  `/invite` (referrals), `/privacy`, `/forgetme` (deletes your data).
 
 Because there's **no database/volume**, all state (batches, rate-limit
 counters, FSM) resets on redeploy — that's expected and acceptable.

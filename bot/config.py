@@ -56,8 +56,52 @@ class Settings(BaseSettings):
     # Max characters kept from any single fetched link / parsed file.
     context_max_chars: int = 20000
 
+    # --- Persistence / secrets -------------------------------------------
+    # Railway Postgres plugin injects DATABASE_URL (postgresql://...). Required
+    # for quotas/Pro/keys/prompts/payments to work.
+    database_url: str = ""
+    # urlsafe base64 32-byte Fernet key for encrypting BYO OpenRouter keys.
+    # Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    app_secret: str = ""
+
+    # --- Pro tier model / context ----------------------------------------
+    model_text_pro: str = ""  # defaults to model_text when empty
+    max_context_chars_pro: int = 120000
+
+    # --- Billing ----------------------------------------------------------
+    crypto_pay_api_token: str = ""  # empty -> hide crypto rail
+    pro_price_stars: int = 250
+    pro_price_usdt: float = 4.0
+    pro_period_days: int = 30
+    max_pro_purchases_per_day: int = 3
+    admin_user_id: int = 0
+
+    # --- Free tier quotas -------------------------------------------------
+    free_signup_audio_sec: int = 600
+    free_signup_photos: int = 5
+    free_daily_audio_sec: int = 300
+    free_daily_photos: int = 5
+    free_daily_llm_calls: int = 30
+    free_saved_prompts: int = 3
+
+    # --- Pro tier quotas --------------------------------------------------
+    pro_daily_audio_sec: int = 7200
+    pro_daily_photos: int = 200
+    pro_daily_llm_calls: int = 500
+    pro_daily_images: int = 50
+    pro_daily_pptx: int = 50
+
+    # --- Referrals --------------------------------------------------------
+    referral_bonus_audio_sec: int = 300
+    referral_bonus_photos: int = 5
+
     # --- Logging ----------------------------------------------------------
     log_level: str = "INFO"
+
+    @property
+    def text_model_pro(self) -> str:
+        """Pro text model, falling back to the standard one if unset."""
+        return self.model_text_pro or self.model_text
 
     @cached_property
     def allowed_ids(self) -> set[int]:

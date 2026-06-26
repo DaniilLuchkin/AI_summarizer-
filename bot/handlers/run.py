@@ -65,25 +65,28 @@ def build_run_keyboard(lang: str) -> InlineKeyboardMarkup:
 async def run_llm(
     message: Message,
     ctx: AppContext,
-    user_id: int,
     lang: str,
     system_prompt: str,
     user_content: str,
+    model: str | None = None,
+    api_key: str | None = None,
     show_keyboard: bool = True,
 ) -> None:
-    """Apply the daily LLM limit, call the text model, and send the result."""
-    if not await check_llm_limit(message, ctx, user_id, lang):
-        return
+    """Call the text model and send the result.
 
+    Quota gating happens in execute.run_staged before calling this. `model` /
+    `api_key` support the Pro model and bring-your-own-key.
+    """
     thinking = await message.answer(t("thinking", lang))
     try:
         answer = await ctx.orclient.chat(
             [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_content},
-            ]
+            ],
+            model=model,
+            api_key=api_key,
         )
-        ctx.limiter.record_llm(user_id)
         await send_result(message, answer, lang)
         if show_keyboard:
             await message.answer(t("followup_hint", lang), reply_markup=build_actions_keyboard(lang))
@@ -98,15 +101,3 @@ async def run_llm(
             await thinking.delete()
         except Exception:  # noqa: BLE001
             pass
-
-
-async def check_llm_limit(message: Message, ctx: AppContext, user_id: int, lang: str) -> bool:
-    """Return True if the user may make another LLM call; else notify and False."""
-    allowed, reset_in = ctx.limiter.check_llm(user_id)
-    if allowed:
-        return True
-    hours = max(1, round(reset_in / 3600))
-    await message.answer(
-        t("rate_limit_llm", lang).format(limit=ctx.settings.max_llm_calls_per_day, hours=hours)
-    )
-    return False

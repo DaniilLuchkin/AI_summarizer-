@@ -9,7 +9,9 @@ from dataclasses import dataclass
 
 from bot.config import Settings
 from bot.services.batch import BatchStore
+from bot.services.db import Database
 from bot.services.openrouter import OpenRouterClient
+from bot.services.quota import Quota
 from bot.services.ratelimit import RateLimiter
 
 
@@ -19,3 +21,5 @@ class AppContext:
     store: BatchStore
     limiter: RateLimiter
     orclient: OpenRouterClient
+    db: Database
+    quota: Quota

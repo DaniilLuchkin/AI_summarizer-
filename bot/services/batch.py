@@ -33,6 +33,8 @@ class ChatState:
     dropped: int = 0
     # True once we've notified the user that the batch limit was hit.
     limit_notified: bool = False
+    # Last custom-prompt instruction (for the 💾 Save prompt button).
+    last_custom_prompt: str | None = None
 
     @property
     def has_active_batch(self) -> bool:
@@ -111,15 +113,17 @@ class BatchStore:
         state.dropped = 0
         state.limit_notified = False
 
-    def assemble_for_llm(self, state: ChatState) -> tuple[str, bool]:
+    def assemble_for_llm(self, state: ChatState, max_chars: int | None = None) -> tuple[str, bool]:
         """Join finalized items into one document, truncating oldest if too long.
 
         Returns (document, truncated?). Oldest items are dropped first so the
-        most recent context is preserved.
+        most recent context is preserved. `max_chars` overrides the default cap
+        (Pro users get a larger window).
         """
+        cap = max_chars or self._max_chars
         items = list(state.item_texts)
         truncated = False
-        while items and sum(len(t) + 2 for t in items) > self._max_chars:
+        while items and sum(len(t) + 2 for t in items) > cap:
             items.pop(0)
             truncated = True
         return "\n\n".join(items), truncated
