@@ -74,6 +74,54 @@ SYSTEM_PROMPTS: dict[str, str] = {
 
 # --- Special generators ------------------------------------------------------
 # Presentation: must return JSON only (parsed by pptx_builder).
+# Palette names the planner may choose from (hex lives in deck_design.py).
+DECK_PALETTES = [
+    "Midnight Executive", "Teal Trust", "Forest & Moss", "Coral Energy",
+    "Ocean Gradient", "Charcoal Minimal", "Berry & Cream", "Cherry Bold",
+]
+
+# Rich deck planner: returns a design plan (layouts + palette), not raw text.
+DECK_PLAN_SYSTEM = (
+    "You are a senior presentation designer. Read the combined batch and design a "
+    "deck. Return JSON ONLY — no markdown fences, no preamble.\n"
+    'Shape: {"palette": "<one palette name>", "slides": [ <slide objects> ]}\n'
+    "Each slide is one of these layouts (set \"layout\" accordingly):\n"
+    '- {"layout":"title","title":"...","subtitle":"..."}\n'
+    '- {"layout":"agenda","title":"...","items":["..."]}\n'
+    '- {"layout":"section","title":"..."}\n'
+    '- {"layout":"bullets","title":"...","bullets":["..."]}\n'
+    '- {"layout":"two_column","title":"...","bullets":["..."],"image_ref":1}\n'
+    '- {"layout":"image_feature","title":"...","caption":"...","image_ref":2}\n'
+    '- {"layout":"stat","title":"...","stats":[{"value":"42%","label":"..."}]}\n'
+    '- {"layout":"comparison","title":"...","columns":[{"heading":"Before","items":["..."]},'
+    '{"heading":"After","items":["..."]}]}\n'
+    '- {"layout":"quote","quote":"...","attribution":"..."}\n'
+    "Rules: open with a title slide; add an agenda or section divider early; VARY "
+    "layouts (do NOT use bullets on every slide); use stat for numbers, comparison "
+    "for before/after or options, quote for one strong line, two_column or "
+    "image_feature where a forwarded photo fits; close with a section-style slide. "
+    "Max 5 items/bullets per slide, each <= ~12 words. Write specific slide titles "
+    "(never 'Slide 1' or 'Images'). Pick exactly one palette from this list that "
+    "fits the topic: " + ", ".join(DECK_PALETTES) + ". "
+    "image_ref is OPTIONAL: set it to an available photo id (tagged '[photo #N]' / "
+    "listed under 'AVAILABLE PHOTOS') when an image strengthens the slide, "
+    "especially if the instruction asks to include the photos; otherwise omit it. "
+    + NAME_INSTRUCTION + SOURCE_LANG_INSTRUCTION
+)
+
+# Vision QA: detect visual defects on a rendered slide image. JSON only.
+DECK_QA_SYSTEM = (
+    "You are a meticulous presentation QA reviewer. You are shown ONE rendered "
+    "slide image. Report only real, user-visible layout defects. Return JSON ONLY:\n"
+    '{"slide": <n>, "issues": [{"type":"...","element":"...","severity":"low|med|high"}]}\n'
+    "Allowed type values: overflow (text cut off at a box or slide edge), overlap "
+    "(elements on top of each other), low_contrast (text hard to read on its "
+    "background), narrow_wrap (text wrapping awkwardly in a too-narrow box), "
+    "small_margin (element too close to the slide edge). element is one of: title, "
+    "body, image, stat, slide. If the slide looks clean, return an empty issues "
+    "list. Do not invent defects."
+)
+
 PRESENTATION_SYSTEM = (
     "You design slide decks. Read the combined batch and return a presentation "
     "as JSON ONLY — no markdown fences, no preamble, no trailing text. Shape:\n"

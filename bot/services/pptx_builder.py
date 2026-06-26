@@ -51,7 +51,11 @@ def _place_image(slide, img_bytes: bytes, left: int, top: int, box_w: int, box_h
 
 
 def parse_slides(raw: str) -> dict:
-    """Parse the model output into a {title, slides} dict (lenient)."""
+    """Parse the model output into a {..., slides} dict (lenient).
+
+    Works for both the legacy {title, slides:[{title,bullets}]} and the rich
+    {palette, slides:[{layout,...}]} plan — both have a 'slides' array.
+    """
     match = _JSON_BLOCK.search(raw or "")
     if not match:
         raise ValueError("no JSON object found in model output")
@@ -59,6 +63,48 @@ def parse_slides(raw: str) -> dict:
     if not isinstance(data, dict) or "slides" not in data:
         raise ValueError("JSON missing 'slides'")
     return data
+
+
+# --- Design-system orchestration (rich plan) ---------------------------------
+def build_design(plan: dict, photos: dict | None = None, overrides: dict | None = None) -> bytes:
+    """Render a rich layout plan with the design system (deck_design)."""
+    from bot.services import deck_design  # local import keeps this module light
+
+    return deck_design.build_deck(plan, photos=photos, overrides=overrides)
+
+
+def flatten_for_template(plan: dict) -> dict:
+    """Collapse a rich layout plan into the legacy {title, slides} shape so a
+    company template (placeholder-based) can render it while keeping its theme."""
+    deck_title = ""
+    slides: list[dict] = []
+    for s in plan.get("slides", []):
+        if not isinstance(s, dict):
+            continue
+        layout = s.get("layout")
+        title = str(s.get("title") or "")
+        if layout == "title" and not deck_title:
+            deck_title = title or str(s.get("subtitle") or "")
+            continue
+        bullets: list[str] = []
+        if layout == "quote":
+            bullets = [f"“{s.get('quote', '')}”", f"— {s.get('attribution', '')}"]
+            title = title or "Quote"
+        else:
+            bullets += [str(b) for b in (s.get("bullets") or [])]
+            bullets += [str(b) for b in (s.get("items") or [])]
+            for st in (s.get("stats") or []):
+                bullets.append(f"{st.get('value', '')} — {st.get('label', '')}")
+            for col in (s.get("columns") or []):
+                bullets.append(str(col.get("heading", "")))
+                bullets += [f"  • {it}" for it in col.get("items", [])]
+            if s.get("caption"):
+                bullets.append(str(s["caption"]))
+        out: dict = {"title": title, "bullets": [b for b in bullets if b.strip()]}
+        if isinstance(s.get("image_ref"), int):
+            out["image_ref"] = s["image_ref"]
+        slides.append(out)
+    return {"title": deck_title or "Presentation", "slides": slides}
 
 
 def build_pptx(
