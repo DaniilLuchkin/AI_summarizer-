@@ -42,14 +42,21 @@ class OpenRouterClient:
         await self._client.aclose()
 
     # --- Text / chat -----------------------------------------------------
-    async def chat(self, messages: list[dict], model: str | None = None) -> str:
-        """Plain OpenAI-style chat completion. Returns the assistant text."""
+    async def chat(
+        self, messages: list[dict], model: str | None = None, api_key: str | None = None
+    ) -> str:
+        """Plain OpenAI-style chat completion. Returns the assistant text.
+
+        `api_key` overrides the global key for this call (bring-your-own-key).
+        """
         payload = {"model": model or self._settings.model_text, "messages": messages}
-        data = await self._post("/chat/completions", payload)
+        data = await self._post("/chat/completions", payload, api_key=api_key)
         return self._extract_message(data)
 
     # --- Vision ----------------------------------------------------------
-    async def vision(self, image_bytes: bytes, prompt: str, mime: str = "image/jpeg") -> str:
+    async def vision(
+        self, image_bytes: bytes, prompt: str, mime: str = "image/jpeg", api_key: str | None = None
+    ) -> str:
         """Send one image + a text prompt to the vision model (base64 data URI)."""
         b64 = base64.b64encode(image_bytes).decode("ascii")
         data_uri = f"data:{mime};base64,{b64}"
@@ -63,12 +70,16 @@ class OpenRouterClient:
             }
         ]
         payload = {"model": self._settings.model_vision, "messages": messages}
-        data = await self._post("/chat/completions", payload)
+        data = await self._post("/chat/completions", payload, api_key=api_key)
         return self._extract_message(data)
 
     # --- Transcription ---------------------------------------------------
     async def transcribe(
-        self, audio_bytes: bytes, audio_format: str, language: str | None = None
+        self,
+        audio_bytes: bytes,
+        audio_format: str,
+        language: str | None = None,
+        api_key: str | None = None,
     ) -> str:
         """Transcribe one audio chunk.
 
@@ -82,14 +93,16 @@ class OpenRouterClient:
         }
         if language:
             payload["language"] = language
-        data = await self._post("/audio/transcriptions", payload)
+        data = await self._post("/audio/transcriptions", payload, api_key=api_key)
         text = data.get("text")
         if not isinstance(text, str):
             raise OpenRouterError(f"Unexpected transcription response: {data!r}")
         return text.strip()
 
     # --- Image generation ------------------------------------------------
-    async def generate_image(self, prompt: str, aspect_ratio: str = "1:1") -> bytes:
+    async def generate_image(
+        self, prompt: str, aspect_ratio: str = "1:1", api_key: str | None = None
+    ) -> bytes:
         """Generate an image and return its raw bytes.
 
         OpenRouter may return either an http(s) URL or a base64 data URI; we
@@ -100,7 +113,7 @@ class OpenRouterClient:
             "prompt": prompt,
             "aspect_ratio": aspect_ratio,
         }
-        data = await self._post("/images", payload)
+        data = await self._post("/images", payload, api_key=api_key)
         try:
             url = data["data"][0]["url"]
         except (KeyError, IndexError, TypeError) as exc:
@@ -116,10 +129,23 @@ class OpenRouterClient:
             resp.raise_for_status()
             return resp.content
 
-    # --- Internals -------------------------------------------------------
-    async def _post(self, path: str, payload: dict) -> dict:
+    # --- Key validation --------------------------------------------------
+    async def validate_key(self, api_key: str) -> bool:
+        """Cheap check that a BYO key is usable (GET /key returns 200 if valid)."""
         try:
-            resp = await self._client.post(path, json=payload)
+            resp = await self._client.get(
+                "/key", headers={"Authorization": f"Bearer {api_key}"}
+            )
+        except httpx.HTTPError:
+            return False
+        return resp.status_code == 200
+
+    # --- Internals -------------------------------------------------------
+    async def _post(self, path: str, payload: dict, api_key: str | None = None) -> dict:
+        # A per-call key (BYO) overrides the client's default Authorization header.
+        extra = {"Authorization": f"Bearer {api_key}"} if api_key else None
+        try:
+            resp = await self._client.post(path, json=payload, headers=extra)
         except httpx.HTTPError as exc:  # network / timeout
             raise OpenRouterError(f"HTTP error calling {path}: {exc}") from exc
         if resp.status_code >= 400:

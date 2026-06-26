@@ -9,7 +9,7 @@ session (see BatchStore); a manual /lang choice is an override that sticks acros
 from __future__ import annotations
 
 from aiogram import F, Router
-from aiogram.filters import Command
+from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
     BotCommandScopeChat,
@@ -36,8 +36,21 @@ def build_router(ctx: AppContext) -> Router:
         )
 
     @router.message(Command("start"))
-    async def cmd_start(message: Message, state: FSMContext) -> None:
-        # Keep any manual override; otherwise lock in the detected language.
+    async def cmd_start(message: Message, state: FSMContext, command: CommandObject) -> None:
+        # Referral deep link: /start ref_<code> credits both parties once.
+        referred_by = None
+        args = (command.args or "").strip()
+        if args.startswith("ref_"):
+            referrer = await ctx.db.user_by_referral_code(args[4:])
+            if referrer is not None:
+                referred_by = referrer["telegram_id"]
+        user = await ctx.quota.ensure_user(message.from_user.id, referred_by=referred_by)
+
+        # Hydrate a persisted /lang override into the in-memory store.
+        if user["lang_override"]:
+            ctx.store.set_lang_override(message.chat.id, user["lang_override"])
+
+        # Keep any override; otherwise lock in the detected language.
         lang = _lang(message)
         ctx.store.set_lang(message.chat.id, lang)
         await state.clear()
@@ -78,6 +91,9 @@ def build_router(ctx: AppContext) -> Router:
         if chosen not in ("en", "ru", "uk"):
             chosen = "en"
         ctx.store.set_lang_override(callback.message.chat.id, chosen)
+        # Persist the override so it survives a redeploy.
+        await ctx.quota.ensure_user(callback.from_user.id)
+        await ctx.db.set_lang_override(callback.from_user.id, chosen)
         await callback.answer()
         # Relabel this chat's command menu to the chosen language.
         await callback.bot.set_my_commands(

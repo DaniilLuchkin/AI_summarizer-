@@ -145,15 +145,21 @@ async def _finalize(ctx: AppContext, chat_state: ChatState, bot: Bot) -> None:
 
     status = await bot.send_message(chat_state.chat_id, t("finalizing", lang))
 
+    # BYO-key users transcribe/OCR on their own key and bypass quotas.
+    api_key = await ctx.quota.api_key_for(user_id)
+
     item_texts: list[str] = []
     notes: list[str] = []
+    limited = False  # True if any item was skipped because a quota was reached
     index = 0
     for msg in pending:
         index += 1
         kind = _kind(msg)
         name = _sender_name(msg, lang)
         try:
-            text, note = await _process_message(ctx, bot, msg, index, name)
+            text, note, item_limited = await _process_message(
+                ctx, bot, msg, index, name, user_id, api_key
+            )
         except FileTooLarge:
             notes.append(t("skipped_too_large", lang).format(index=index, kind=kind))
             continue
@@ -161,6 +167,7 @@ async def _finalize(ctx: AppContext, chat_state: ChatState, bot: Bot) -> None:
             logger.exception("Failed to process item %s", index)
             notes.append(t("skipped_error", lang).format(index=index, kind=kind, error=exc))
             continue
+        limited = limited or item_limited
         if text is not None:
             item_texts.append(text)
         if note:
@@ -175,6 +182,10 @@ async def _finalize(ctx: AppContext, chat_state: ChatState, bot: Bot) -> None:
     if not item_texts:
         await bot.send_message(chat_state.chat_id, t("empty_batch", lang))
         return
+
+    # If any item was skipped due to a daily/quota limit, nudge toward Pro.
+    if limited:
+        await bot.send_message(chat_state.chat_id, t("upgrade_hint", lang))
 
     await bot.send_message(
         chat_state.chat_id, t("batch_ready", lang), reply_markup=build_actions_keyboard(lang)
@@ -215,58 +226,91 @@ def _kind(msg: Message) -> str:
 
 
 async def _process_message(
-    ctx: AppContext, bot: Bot, msg: Message, index: int, name: str
-) -> tuple[str | None, str | None]:
-    """Convert one message into a labeled context line."""
+    ctx: AppContext, bot: Bot, msg: Message, index: int, name: str, user_id: int, api_key: str | None
+) -> tuple[str | None, str | None, bool]:
+    """Convert one message into a labeled context line.
+
+    Returns (item_text, optional_note, limited?) where `limited` is True when the
+    item was skipped because the user hit a daily/quota limit.
+    """
     caption = (msg.caption or "").strip()
     lang = ctx.store.get_lang(msg.chat.id) or "en"
 
     if msg.text:
-        return _label(index, name, texts.KIND_TEXT, msg.text.strip()), None
+        return _label(index, name, texts.KIND_TEXT, msg.text.strip()), None, False
 
-    if msg.voice:
-        data = await media.download(bot, msg.voice.file_id)
-        transcript = await transcribe.transcribe_media(ctx.orclient, data, "ogg", is_video=False)
-        return _label(index, name, texts.KIND_VOICE, _join(transcript, caption)), None
-
-    if msg.audio:
-        data = await media.download(bot, msg.audio.file_id)
-        fmt = _audio_format(msg.audio.mime_type, msg.audio.file_name)
-        transcript = await transcribe.transcribe_media(ctx.orclient, data, fmt, is_video=False)
-        return _label(index, name, texts.KIND_AUDIO, _join(transcript, caption)), None
-
-    if msg.video_note:
-        data = await media.download(bot, msg.video_note.file_id)
-        transcript = await transcribe.transcribe_media(ctx.orclient, data, "mp4", is_video=True)
-        if transcript is None:
-            return None, t("skipped_no_audio", lang).format(index=index)
-        return _label(index, name, texts.KIND_VIDEO_NOTE, _join(transcript, caption)), None
-
-    if msg.video:
-        data = await media.download(bot, msg.video.file_id)
-        transcript = await transcribe.transcribe_media(ctx.orclient, data, "mp4", is_video=True)
-        if transcript is None:
-            note = t("skipped_no_audio", lang).format(index=index)
-            if caption:
-                return _label(index, name, texts.KIND_VIDEO, caption), note
-            return None, note
-        return _label(index, name, texts.KIND_VIDEO, _join(transcript, caption)), None
+    # --- Audio-bearing items: probe duration -> consume_audio -> cache/transcribe
+    if msg.voice or msg.audio or msg.video_note or msg.video:
+        return await _process_audio(ctx, bot, msg, index, name, caption, lang, user_id, api_key)
 
     if msg.photo:
         largest = msg.photo[-1]
-        data = await media.download(bot, largest.file_id)
-        extracted = await vision.describe_image(ctx.orclient, data)
-        return _label(index, name, texts.KIND_PHOTO, _join(extracted, caption)), None
+        ok, _ = await ctx.quota.consume_photo(user_id, 1)
+        if not ok:
+            return _label(index, name, texts.KIND_PHOTO, t("item_not_ocr", lang)), None, True
+        text = await _cached_or_call(
+            ctx, largest.file_unique_id, "vision",
+            lambda data: vision.describe_image(ctx.orclient, data, api_key=api_key),
+            lambda: media.download(bot, largest.file_id),
+        )
+        return _label(index, name, texts.KIND_PHOTO, _join(text, caption)), None, False
 
     if msg.document:
         data = await media.download(bot, msg.document.file_id)
         try:
             parsed = parse_file(msg.document.file_name or "", data, ctx.settings.context_max_chars)
         except ValueError:
-            return None, t("unsupported_document", lang).format(index=index)
-        return _label(index, name, texts.KIND_DOCUMENT, _join(parsed, caption)), None
+            return None, t("unsupported_document", lang).format(index=index), False
+        return _label(index, name, texts.KIND_DOCUMENT, _join(parsed, caption)), None, False
 
-    return None, None
+    return None, None, False
+
+
+async def _process_audio(ctx, bot, msg, index, name, caption, lang, user_id, api_key):
+    """Handle voice/audio/video/video_note: quota by duration, cache, transcribe."""
+    if msg.voice:
+        file_id, fuid, fmt, kind, is_video = msg.voice.file_id, msg.voice.file_unique_id, "ogg", texts.KIND_VOICE, False
+    elif msg.audio:
+        fmt = _audio_format(msg.audio.mime_type, msg.audio.file_name)
+        file_id, fuid, kind, is_video = msg.audio.file_id, msg.audio.file_unique_id, texts.KIND_AUDIO, False
+    elif msg.video_note:
+        file_id, fuid, fmt, kind, is_video = msg.video_note.file_id, msg.video_note.file_unique_id, "mp4", texts.KIND_VIDEO_NOTE, True
+    else:  # msg.video
+        file_id, fuid, fmt, kind, is_video = msg.video.file_id, msg.video.file_unique_id, "mp4", texts.KIND_VIDEO, True
+
+    data = await media.download(bot, file_id)  # raises FileTooLarge if >20MB
+    duration = await media.probe_duration_bytes(data, fmt) or 0
+
+    ok, _ = await ctx.quota.consume_audio(user_id, int(duration))
+    if not ok:
+        return _label(index, name, kind, t("item_not_transcribed", lang)), None, True
+
+    # Cache hit avoids re-billing OpenRouter for the same file.
+    cached = await ctx.db.media_cache_get(fuid)
+    if cached is not None:
+        return _label(index, name, kind, _join(cached, caption)), None, False
+
+    transcript = await transcribe.transcribe_media(
+        ctx.orclient, data, fmt, is_video=is_video, api_key=api_key
+    )
+    if transcript is None:  # video with no audio track
+        note = t("skipped_no_audio", lang).format(index=index)
+        if caption:
+            return _label(index, name, kind, caption), note, False
+        return None, note, False
+    await ctx.db.media_cache_put(fuid, "transcript", transcript)
+    return _label(index, name, kind, _join(transcript, caption)), None, False
+
+
+async def _cached_or_call(ctx, file_unique_id, kind, call_with_data, download):
+    """Return cached derived text, else download + call the model + cache it."""
+    cached = await ctx.db.media_cache_get(file_unique_id)
+    if cached is not None:
+        return cached
+    data = await download()
+    text = await call_with_data(data)
+    await ctx.db.media_cache_put(file_unique_id, kind, text)
+    return text
 
 
 def _label(index: int, name: str, kind: str, body: str) -> str:

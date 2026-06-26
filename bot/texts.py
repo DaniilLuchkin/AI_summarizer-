@@ -55,7 +55,8 @@ TEXTS: dict[str, dict[str, str]] = {
             "и соберу всё в один документ с именами отправителей.\n"
             "3️⃣ Выберите действие на клавиатуре или нажмите «✍️ Свой запрос».\n"
             "4️⃣ К своему запросу можно приложить контекст — файл или ссылку.\n\n"
-            "Команды:\n/reset — очистить пачку\n/start — показать справку"
+            "Команды:\n/reset — очистить пачку\n/pro — перейти на Pro\n"
+            "🔒 /privacy — как мы обращаемся с данными"
         ),
         "reset_done": "🧹 Пачка очищена. Присылайте новые сообщения.",
         "help": (
@@ -67,7 +68,9 @@ TEXTS: dict[str, dict[str, str]] = {
             "• Выберите действие на клавиатуре — оно появится как команда, к которой "
             "можно добавить контекст (текст, файл или ссылку), затем «▶️ Запустить».\n"
             "• Или просто напишите свой запрос текстом — он выполнится по текущей пачке.\n\n"
-            "Команды: /start, /reset, /help, /lang"
+            "Команды: /start, /reset, /help, /lang, /pro, /usage\n"
+            "/setkey, /removekey — свой ключ OpenRouter · /prompts — сохранённые запросы\n"
+            "/invite — пригласить друзей · /privacy, /forgetme — данные"
         ),
         "lang_choose": "Выбери язык интерфейса:",
         "lang_set": "✅ Язык интерфейса — русский.",
@@ -142,6 +145,58 @@ TEXTS: dict[str, dict[str, str]] = {
         "action_pdf": "📄 PDF",
         "action_image": "🎨 Картинка",
         "action_custom": "✍️ Или просто напишите свой запрос ⬇️",
+        # --- Monetization / account ---
+        "paywall_image": "🎨 Генерация изображений доступна на Pro. Откройте Pro: /pro",
+        "paywall_pptx": "📊 Презентации доступны на Pro. Откройте Pro: /pro",
+        "paywall_generic": "Эта функция недоступна на текущем тарифе. Подробнее: /pro",
+        "limit_audio": "Достигнут дневной лимит расшифровки аудио. Подробнее: /pro",
+        "limit_photo": "Достигнут дневной лимит анализа фото. Подробнее: /pro",
+        "limit_llm": "🚦 Достигнут дневной лимит запросов к модели. Откройте Pro: /pro",
+        "item_not_transcribed": "не расшифровано: достигнут дневной лимит",
+        "item_not_ocr": "не распознано: достигнут дневной лимит",
+        "upgrade_hint": "ℹ️ Часть элементов пропущена из-за лимитов. Больше — на Pro: /pro",
+        "pro_benefits": (
+            "⭐ Forwardly Pro\n\n• Генерация изображений 🎨 и презентаций 📊\n"
+            "• Большие дневные лимиты аудио/фото/запросов\n"
+            "• Более мощная модель и больший контекст\n\n"
+            "Цена: {stars}⭐ или {usdt} USDT за 30 дней."
+        ),
+        "btn_pay_stars": "⭐ Оплатить Stars",
+        "btn_pay_crypto": "💎 Оплатить криптой",
+        "btn_paid_check": "✅ Я оплатил — проверить",
+        "payment_success": "🎉 Pro активирован! Спасибо за поддержку.",
+        "payment_held": "⏳ Платёж получен, но требует проверки. Мы скоро всё подтвердим.",
+        "crypto_not_paid": "Платёж пока не виден. Если вы только что оплатили — подождите минуту и нажмите ещё раз.",
+        "usage_report": (
+            "📊 Тариф: {plan}\n\nОсталось сегодня:\n• 🎙 Аудио: {audio_min} мин\n"
+            "• 🖼 Анализ фото: {photos}\n• 💬 Текстовые действия: {llm}\n"
+            "• 🎨 Изображения: {images}\n• 📊 Презентации: {pptx}\n\n"
+            "🎁 Бонус при регистрации: {bonus_audio_min} мин аудио, {bonus_photos} фото\n\n"
+            "👥 Приглашайте друзей — бонус обоим:\n{invite}"
+        ),
+        "plan_pro": "Pro (до {date})",
+        "plan_free": "Free",
+        "byo_active": "Свой ключ (без лимитов)",
+        "invite_text": (
+            "👥 Ваша реферальная ссылка:\n{link}\n\nЗа каждого нового пользователя "
+            "вы оба получаете +{audio_min} мин аудио и +{photos} фото."
+        ),
+        "key_saved": "🔑 Ключ сохранён. Теперь запросы идут через ваш ключ OpenRouter без лимитов.",
+        "key_removed": "🔑 Ключ удалён. Снова действуют обычные лимиты.",
+        "key_invalid": "⚠️ Не получилось проверить ключ. Использование: /setkey <ваш ключ OpenRouter>",
+        "prompt_saved": "💾 Промпт сохранён. Смотрите /prompts.",
+        "prompts_empty": "У вас пока нет сохранённых промптов. Запустите свой запрос и нажмите «Сохранить».",
+        "prompts_pick": "Ваши сохранённые промпты:",
+        "prompts_limit": "На бесплатном тарифе можно хранить до {limit} промптов. Pro — без ограничений: /pro",
+        "btn_save_prompt": "💾 Сохранить промпт",
+        "privacy_text": (
+            "🔒 Приватность\n\nПересланный контент обрабатывается временно — только чтобы "
+            "выполнить ваше действие. Производный текст (расшифровки/распознавание) кэшируется "
+            "по непрозрачному файловому id Telegram, чтобы не платить дважды, и не содержит "
+            "идентификаторов аккаунта. Мы ничего не продаём. Удалить свои данные: /forgetme"
+        ),
+        "forgetme_confirm": "Удалить все ваши данные (тариф, лимиты, промпты, платежи)? Это необратимо.",
+        "forgetme_done": "🗑 Готово. Все ваши данные удалены.",
     },
     # ================================================================= EN ===
     "en": {
@@ -154,7 +209,8 @@ TEXTS: dict[str, dict[str, str]] = {
             "assemble one document labeled with sender names.\n"
             "3️⃣ Pick an action on the keyboard or tap “✍️ Custom prompt”.\n"
             "4️⃣ You can attach context to a custom prompt — a file or a link.\n\n"
-            "Commands:\n/reset — clear the batch\n/start — show this help"
+            "Commands:\n/reset — clear the batch\n/pro — upgrade to Pro\n"
+            "🔒 /privacy — how we handle your data"
         ),
         "reset_done": "🧹 Batch cleared. Send new messages.",
         "help": (
@@ -166,7 +222,9 @@ TEXTS: dict[str, dict[str, str]] = {
             "• Pick an action — it appears as a command you can extend with context "
             "(text, file, or link), then “▶️ Run”.\n"
             "• Or just type your prompt — it runs against the current batch.\n\n"
-            "Commands: /start, /reset, /help, /lang"
+            "Commands: /start, /reset, /help, /lang, /pro, /usage\n"
+            "/setkey, /removekey — your OpenRouter key · /prompts — saved prompts\n"
+            "/invite — refer friends · /privacy, /forgetme — your data"
         ),
         "lang_choose": "Choose interface language:",
         "lang_set": "✅ Language set to English.",
@@ -237,6 +295,58 @@ TEXTS: dict[str, dict[str, str]] = {
         "action_pdf": "📄 PDF",
         "action_image": "🎨 Image",
         "action_custom": "✍️ Or just type your prompt ⬇️",
+        # --- Monetization / account ---
+        "paywall_image": "🎨 Image generation is a Pro feature. Unlock Pro: /pro",
+        "paywall_pptx": "📊 Presentations are a Pro feature. Unlock Pro: /pro",
+        "paywall_generic": "This feature isn't available on your plan. Details: /pro",
+        "limit_audio": "Daily audio transcription limit reached. Details: /pro",
+        "limit_photo": "Daily photo analysis limit reached. Details: /pro",
+        "limit_llm": "🚦 Daily model-request limit reached. Unlock Pro: /pro",
+        "item_not_transcribed": "not transcribed: daily limit reached",
+        "item_not_ocr": "not analyzed: daily limit reached",
+        "upgrade_hint": "ℹ️ Some items were skipped due to limits. Get more with Pro: /pro",
+        "pro_benefits": (
+            "⭐ Forwardly Pro\n\n• Image 🎨 and presentation 📊 generation\n"
+            "• Much higher daily audio/photo/request limits\n"
+            "• A stronger model and a larger context\n\n"
+            "Price: {stars}⭐ or {usdt} USDT for 30 days."
+        ),
+        "btn_pay_stars": "⭐ Pay with Stars",
+        "btn_pay_crypto": "💎 Pay with crypto",
+        "btn_paid_check": "✅ I've paid — check",
+        "payment_success": "🎉 Pro is active! Thanks for the support.",
+        "payment_held": "⏳ Payment received but needs a quick review. We'll confirm shortly.",
+        "crypto_not_paid": "Payment not visible yet. If you just paid, wait a minute and tap again.",
+        "usage_report": (
+            "📊 Plan: {plan}\n\nRemaining today:\n• 🎙 Audio: {audio_min} min\n"
+            "• 🖼 Photo analyses: {photos}\n• 💬 Text actions: {llm}\n"
+            "• 🎨 Images: {images}\n• 📊 Presentations: {pptx}\n\n"
+            "🎁 Signup bonus: {bonus_audio_min} min audio, {bonus_photos} photos\n\n"
+            "👥 Invite friends — both get a bonus:\n{invite}"
+        ),
+        "plan_pro": "Pro (until {date})",
+        "plan_free": "Free",
+        "byo_active": "Your own key (no limits)",
+        "invite_text": (
+            "👥 Your referral link:\n{link}\n\nFor every new user, you both get "
+            "+{audio_min} min audio and +{photos} photos."
+        ),
+        "key_saved": "🔑 Key saved. Your requests now use your own OpenRouter key with no limits.",
+        "key_removed": "🔑 Key removed. Standard limits apply again.",
+        "key_invalid": "⚠️ Couldn't validate the key. Usage: /setkey <your OpenRouter key>",
+        "prompt_saved": "💾 Prompt saved. See /prompts.",
+        "prompts_empty": "You have no saved prompts yet. Run a custom prompt and tap Save.",
+        "prompts_pick": "Your saved prompts:",
+        "prompts_limit": "Free plan stores up to {limit} prompts. Pro is unlimited: /pro",
+        "btn_save_prompt": "💾 Save prompt",
+        "privacy_text": (
+            "🔒 Privacy\n\nForwarded content is processed transiently — only to perform the "
+            "action you asked for. Derived text (transcripts/OCR) is cached by Telegram's opaque "
+            "file id to avoid re-billing and contains no account identifiers. Nothing is sold. "
+            "Delete your data: /forgetme"
+        ),
+        "forgetme_confirm": "Delete all your data (plan, limits, saved prompts, payments)? This can't be undone.",
+        "forgetme_done": "🗑 Done. All your data has been deleted.",
     },
     # ================================================================= UK ===
     "uk": {
@@ -249,7 +359,8 @@ TEXTS: dict[str, dict[str, str]] = {
             "зображень і зберу все в один документ з іменами відправників.\n"
             "3️⃣ Оберіть дію на клавіатурі або натисніть «✍️ Свій запит».\n"
             "4️⃣ До свого запиту можна додати контекст — файл або посилання.\n\n"
-            "Команди:\n/reset — очистити пачку\n/start — показати довідку"
+            "Команди:\n/reset — очистити пачку\n/pro — перейти на Pro\n"
+            "🔒 /privacy — як ми обробляємо дані"
         ),
         "reset_done": "🧹 Пачку очищено. Надсилайте нові повідомлення.",
         "help": (
@@ -261,7 +372,9 @@ TEXTS: dict[str, dict[str, str]] = {
             "• Оберіть дію на клавіатурі — вона з'явиться як команда, до якої можна "
             "додати контекст (текст, файл або посилання), потім «▶️ Запустити».\n"
             "• Або просто напишіть свій запит текстом — він виконається за поточною пачкою.\n\n"
-            "Команди: /start, /reset, /help, /lang"
+            "Команди: /start, /reset, /help, /lang, /pro, /usage\n"
+            "/setkey, /removekey — свій ключ OpenRouter · /prompts — збережені запити\n"
+            "/invite — запросити друзів · /privacy, /forgetme — дані"
         ),
         "lang_choose": "Обери мову інтерфейсу:",
         "lang_set": "✅ Мова інтерфейсу — українська.",
@@ -335,5 +448,57 @@ TEXTS: dict[str, dict[str, str]] = {
         "action_pdf": "📄 PDF",
         "action_image": "🎨 Зображення",
         "action_custom": "✍️ Або просто напишіть свій запит ⬇️",
+        # --- Monetization / account ---
+        "paywall_image": "🎨 Генерація зображень доступна на Pro. Відкрийте Pro: /pro",
+        "paywall_pptx": "📊 Презентації доступні на Pro. Відкрийте Pro: /pro",
+        "paywall_generic": "Ця функція недоступна на поточному тарифі. Деталі: /pro",
+        "limit_audio": "Досягнуто денного ліміту розшифрування аудіо. Деталі: /pro",
+        "limit_photo": "Досягнуто денного ліміту аналізу фото. Деталі: /pro",
+        "limit_llm": "🚦 Досягнуто денного ліміту запитів до моделі. Відкрийте Pro: /pro",
+        "item_not_transcribed": "не розшифровано: досягнуто денного ліміту",
+        "item_not_ocr": "не розпізнано: досягнуто денного ліміту",
+        "upgrade_hint": "ℹ️ Частину елементів пропущено через ліміти. Більше — на Pro: /pro",
+        "pro_benefits": (
+            "⭐ Forwardly Pro\n\n• Генерація зображень 🎨 та презентацій 📊\n"
+            "• Значно більші денні ліміти аудіо/фото/запитів\n"
+            "• Потужніша модель і більший контекст\n\n"
+            "Ціна: {stars}⭐ або {usdt} USDT за 30 днів."
+        ),
+        "btn_pay_stars": "⭐ Сплатити Stars",
+        "btn_pay_crypto": "💎 Сплатити криптою",
+        "btn_paid_check": "✅ Я сплатив — перевірити",
+        "payment_success": "🎉 Pro активовано! Дякуємо за підтримку.",
+        "payment_held": "⏳ Платіж отримано, але потрібна перевірка. Скоро підтвердимо.",
+        "crypto_not_paid": "Платіж поки не видно. Якщо ви щойно сплатили — зачекайте хвилину й натисніть ще раз.",
+        "usage_report": (
+            "📊 Тариф: {plan}\n\nЗалишилось сьогодні:\n• 🎙 Аудіо: {audio_min} хв\n"
+            "• 🖼 Аналіз фото: {photos}\n• 💬 Текстові дії: {llm}\n"
+            "• 🎨 Зображення: {images}\n• 📊 Презентації: {pptx}\n\n"
+            "🎁 Бонус за реєстрацію: {bonus_audio_min} хв аудіо, {bonus_photos} фото\n\n"
+            "👥 Запрошуйте друзів — бонус обом:\n{invite}"
+        ),
+        "plan_pro": "Pro (до {date})",
+        "plan_free": "Free",
+        "byo_active": "Власний ключ (без лімітів)",
+        "invite_text": (
+            "👥 Ваше реферальне посилання:\n{link}\n\nЗа кожного нового користувача "
+            "ви обидва отримуєте +{audio_min} хв аудіо та +{photos} фото."
+        ),
+        "key_saved": "🔑 Ключ збережено. Тепер запити йдуть через ваш ключ OpenRouter без лімітів.",
+        "key_removed": "🔑 Ключ видалено. Знову діють звичайні ліміти.",
+        "key_invalid": "⚠️ Не вдалося перевірити ключ. Використання: /setkey <ваш ключ OpenRouter>",
+        "prompt_saved": "💾 Промпт збережено. Дивіться /prompts.",
+        "prompts_empty": "У вас поки немає збережених промптів. Запустіть свій запит і натисніть «Зберегти».",
+        "prompts_pick": "Ваші збережені промпти:",
+        "prompts_limit": "На безкоштовному тарифі можна зберігати до {limit} промптів. Pro — без обмежень: /pro",
+        "btn_save_prompt": "💾 Зберегти промпт",
+        "privacy_text": (
+            "🔒 Приватність\n\nПереслан контент обробляється тимчасово — лише щоб виконати вашу "
+            "дію. Похідний текст (розшифрування/розпізнавання) кешується за непрозорим файловим "
+            "id Telegram, щоб не платити двічі, і не містить ідентифікаторів акаунта. Ми нічого "
+            "не продаємо. Видалити дані: /forgetme"
+        ),
+        "forgetme_confirm": "Видалити всі ваші дані (тариф, ліміти, промпти, платежі)? Це незворотно.",
+        "forgetme_done": "🗑 Готово. Усі ваші дані видалено.",
     },
 }

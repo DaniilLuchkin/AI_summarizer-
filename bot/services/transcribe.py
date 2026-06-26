@@ -27,6 +27,7 @@ async def transcribe_media(
     source_format: str,
     is_video: bool,
     language: str | None = None,
+    api_key: str | None = None,
 ) -> str | None:
     """Transcribe audio (or a video's audio track) to text.
 
@@ -55,7 +56,7 @@ async def transcribe_media(
         if duration is None or duration <= MAX_SECONDS_PER_REQUEST:
             with open(work_path, "rb") as fh:
                 data = fh.read()
-            return await orclient.transcribe(data, work_format, language)
+            return await orclient.transcribe(data, work_format, language, api_key=api_key)
 
         # Too long -> split into segments and stitch transcripts together.
         seg_dir = os.path.join(tmp, "segments")
@@ -68,7 +69,7 @@ async def transcribe_media(
         for seg_path in segments:
             with open(seg_path, "rb") as fh:
                 seg_bytes = fh.read()
-            text = await orclient.transcribe(seg_bytes, "mp3", language)
+            text = await orclient.transcribe(seg_bytes, "mp3", language, api_key=api_key)
             if text:
                 parts.append(text)
         return " ".join(parts).strip()

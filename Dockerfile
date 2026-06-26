@@ -18,8 +18,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the application code.
+# Copy the application code + the idempotent DB schema (read at startup).
 COPY bot ./bot
+COPY schema.sql ./schema.sql
 
 # Runs as a worker; no EXPOSE needed (long polling, outbound only).
 CMD ["python", "-m", "bot.main"]

@@ -48,6 +48,16 @@ async def _run(cmd: list[str]) -> tuple[int, bytes, bytes]:
     return proc.returncode or 0, stdout, stderr
 
 
+async def probe_duration_bytes(raw_bytes: bytes, suffix: str) -> float | None:
+    """Duration (seconds) of media held in memory, via a temp file + ffprobe."""
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(suffix=f".{suffix}", delete=True) as fh:
+        fh.write(raw_bytes)
+        fh.flush()
+        return await probe_duration(fh.name)
+
+
 async def probe_duration(path: str) -> float | None:
     """Return media duration in seconds, or None if it can't be determined."""
     rc, out, _ = await _run(

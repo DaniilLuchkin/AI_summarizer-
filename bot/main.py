@@ -14,11 +14,13 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from bot.commands_menu import COMMANDS
 from bot.config import Settings
-from bot.handlers import actions, collect, commands
+from bot.handlers import account, actions, billing, collect, commands
 from bot.middleware import AccessMiddleware
 from bot.runtime import AppContext
 from bot.services.batch import BatchStore
+from bot.services.db import Database
 from bot.services.openrouter import OpenRouterClient
+from bot.services.quota import Quota
 from bot.services.ratelimit import RateLimiter
 
 logger = logging.getLogger(__name__)
@@ -28,13 +30,15 @@ def build_dispatcher(ctx: AppContext) -> Dispatcher:
     """Create the dispatcher, register the access middleware and all routers.
 
     Router order matters: commands first (so /start, /reset win in any state),
-    then the actions router (callbacks + the staged-input state), then the
-    catch-all collector (which only runs in the default state).
+    then billing (so successful_payment messages are consumed before the
+    catch-all collector), account, actions, then the collector last.
     """
     dp = Dispatcher(storage=MemoryStorage())
     dp.update.outer_middleware(AccessMiddleware(ctx.settings))
 
     dp.include_router(commands.build_router(ctx))
+    dp.include_router(billing.build_router(ctx))
+    dp.include_router(account.build_router(ctx))
     dp.include_router(actions.build_router(ctx))
     dp.include_router(collect.build_router(ctx))
     return dp
@@ -47,12 +51,20 @@ async def _run() -> None:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
+    if not settings.database_url:
+        raise RuntimeError("DATABASE_URL is required (add the Railway Postgres plugin)")
+
+    db = Database()
+    await db.connect(settings.database_url)
+
     orclient = OpenRouterClient(settings)
     ctx = AppContext(
         settings=settings,
         store=BatchStore(settings.max_batch_messages, settings.max_context_chars),
         limiter=RateLimiter(settings.max_batches_per_hour, settings.max_llm_calls_per_day),
         orclient=orclient,
+        db=db,
+        quota=Quota(db, settings),
     )
 
     bot = Bot(token=settings.telegram_bot_token, default=DefaultBotProperties())
@@ -66,6 +78,7 @@ async def _run() -> None:
         await dp.start_polling(bot)
     finally:
         await orclient.aclose()
+        await db.close()
         await bot.session.close()
 
 

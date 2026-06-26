@@ -17,3 +17,7 @@ trafilatura==1.12.2
 # Output generators
 python-pptx==1.0.2   # PPTX slide decks
 fpdf2==2.8.7         # Unicode/Cyrillic PDFs (uses system DejaVu font)
+
+# Persistence + secrets
+asyncpg==0.30.0      # async PostgreSQL driver (no ORM)
+cryptography==43.0.1 # Fernet encryption for bring-your-own OpenRouter keys
