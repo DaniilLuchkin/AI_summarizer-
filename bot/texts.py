@@ -47,37 +47,38 @@ TEXTS: dict[str, dict[str, str]] = {
     # ================================================================= RU ===
     "ru": {
         "welcome": (
-            "👋 Привет! Я собираю пачку сообщений и превращаю её в текст, "
-            "с которым можно работать через LLM.\n\n"
-            "1️⃣ Перешлите или отправьте несколько сообщений подряд — текст, "
-            "голосовые, кружочки, видео, аудио, документы или фото.\n"
-            "2️⃣ Я подожду пару секунд, расшифрую медиа, распознаю текст с картинок "
-            "и соберу всё в один документ с именами отправителей.\n"
-            "3️⃣ Выберите действие на клавиатуре или нажмите «✍️ Свой запрос».\n"
-            "4️⃣ К своему запросу можно приложить контекст — файл или ссылку.\n\n"
-            "Команды:\n/reset — очистить пачку\n/pro — перейти на Pro\n"
-            "🔒 /privacy — как мы обращаемся с данными"
+            "👋 Привет! Я превращаю пересланные сообщения в готовый результат.\n\n"
+            "1️⃣ Перешлите или отправьте подряд несколько сообщений — текст, голосовые, "
+            "кружочки, видео, аудио, документы, фото. Медиа расшифрую, текст с фото распознаю.\n"
+            "2️⃣ Выберите действие на клавиатуре — или просто напишите свой запрос текстом.\n"
+            "3️⃣ Перед запуском можно добавить контекст: текст, файл или ссылку.\n\n"
+            "Ответ приходит на языке исходных сообщений.\n"
+            "/help — подробнее · /plans — тарифы"
         ),
         "reset_done": "🧹 Пачка очищена. Присылайте новые сообщения.",
         "help": (
-            "ℹ️ Как это работает:\n"
-            "• Перешлите или отправьте несколько сообщений подряд (текст, голосовые, "
-            "кружочки, видео, аудио, документы, фото).\n"
-            "• Я расшифрую медиа, распознаю текст с картинок и соберу всё в один "
-            "документ с именами отправителей.\n"
-            "• Выберите действие на клавиатуре — оно появится как команда, к которой "
-            "можно добавить контекст (текст, файл или ссылку), затем «▶️ Запустить».\n"
-            "• Или просто напишите свой запрос текстом — он выполнится по текущей пачке.\n\n"
-            "Команды: /start, /reset, /help, /lang, /pro, /plans, /usage\n"
-            "/setkey, /removekey — свой ключ OpenRouter · /prompts — сохранённые запросы\n"
-            "/invite — пригласить друзей · /privacy, /forgetme — данные\n"
-            "/models — выбрать модель под каждую задачу (со своим ключом /setkey)"
+            "ℹ️ Как это работает\n"
+            "Перешлите несколько сообщений (текст, голосовые, кружочки, видео, аудио, "
+            "документы, фото). Я расшифрую медиа, распознаю текст с фото и соберу всё в "
+            "один документ с именами отправителей.\n"
+            "Дальше выберите действие на клавиатуре или просто напишите свой запрос. "
+            "К любому действию можно добавить контекст (текст, файл или ссылку) или нажать "
+            "«▶️ Запустить» без него. Для презентации можно приложить свой шаблон .pptx/.potx.\n"
+            "Файлы — до 20 МБ, длинное аудио делю автоматически, длинный ответ присылаю "
+            "файлом. Ответ — на языке исходных сообщений.\n\n"
+            "Команды\n"
+            "• Основные: /start, /reset, /help, /lang\n"
+            "• Тариф и лимиты: /plans, /pro, /usage\n"
+            "• Свой ключ и модели: /setkey, /removekey, /models\n"
+            "• Запросы: /prompts (сохранённые)\n"
+            "• Друзья и данные: /invite, /privacy, /forgetme\n"
+            "• В группах: /summary, /ask, /actions, /clear"
         ),
         "lang_choose": "Выбери язык интерфейса:",
         "lang_set": "✅ Язык интерфейса — русский.",
         "finalizing": "🛠 Обрабатываю пачку (расшифровка, распознавание)…",
         "empty_batch": "Пачка пустая — нечего обрабатывать.",
-        "batch_ready": "✅ Пачка готова. Что сделать?",
+        "batch_ready": "✅ Пачка готова. Выберите действие — или просто напишите свой запрос.",
         "batch_limit_reached": (
             "⚠️ Достигнут лимит в {limit} сообщений на пачку. "
             "Лишние сообщения проигнорированы."
@@ -135,17 +136,17 @@ TEXTS: dict[str, dict[str, str]] = {
         "presentation_failed": "😕 Не удалось собрать презентацию.",
         "pdf_failed": "😕 Не удалось собрать PDF.",
         "image_failed": "😕 Не удалось сгенерировать изображение.",
-        # Action button labels
-        "action_summary": "📝 Краткое содержание",
-        "action_structure": "📋 Структурировать",
-        "action_reply": "💬 Черновик ответа",
-        "action_email": "✉️ Follow-up письмо",
-        "action_items": "✅ Задачи и решения",
-        "action_translate": "🌐 Перевести (EN)",
+        # Action button labels (kept short so they don't truncate on phones)
+        "action_summary": "📝 Кратко",
+        "action_structure": "📋 Структура",
+        "action_reply": "💬 Ответ",
+        "action_email": "✉️ Письмо",
+        "action_items": "✅ Задачи",
+        "action_translate": "🌐 Перевод EN",
         "action_presentation": "📊 Презентация",
         "action_pdf": "📄 PDF",
         "action_image": "🎨 Картинка",
-        "action_custom": "✍️ Или просто напишите свой запрос ⬇️",
+        "action_custom": "✍️ Или просто напишите запрос ⬇️",
         # --- Monetization / account ---
         "paywall_image": "🎨 Генерация изображений доступна на Pro.",
         "paywall_pptx": "📊 Презентации доступны на Pro.",
@@ -273,41 +274,55 @@ TEXTS: dict[str, dict[str, str]] = {
         "models_modality_warn": "⚠️ Внимание: модель может не поддерживать вход/выход для этой задачи — всё равно сохранено.",
         "models_reset_done": "↺ Возвращена модель по умолчанию для этой задачи.",
         "models_reset_all_done": "↺ Все слоты сброшены к умолчаниям.",
+        # --- Moved out of handlers / contextual hints ---
+        "invoice_title": "Forwardly Pro",
+        "invoice_description": "Pro на 30 дней: изображения, презентации, больше лимиты и контекст.",
+        "presentation_context_hint": (
+            "📊 Можно приложить свой шаблон .pptx/.potx и/или добавить текст, файл или "
+            "ссылку, затем отправьте — или нажмите ▶️ Запустить."
+        ),
+        "save_prompt_offer": "💾 Сохранить этот запрос, чтобы запускать его повторно?",
+        "btn_confirm_delete": "✅ Да, удалить",
+        "btn_cancel": "✖️ Отмена",
+        "forgetme_cancelled": "Отменено — данные не тронуты.",
+        "stars_renew_note": "Подписка Stars продлевается автоматически; отменить — в Telegram. Оплата криптой разовая, на 30 дней.",
+        "models_default": "по умолчанию",
     },
     # ================================================================= EN ===
     "en": {
         "welcome": (
-            "👋 Hi! I collect a batch of messages and turn it into text you can "
-            "work on with an LLM.\n\n"
-            "1️⃣ Forward or send several messages in a row — text, voice, video "
-            "notes, videos, audio, documents or photos.\n"
-            "2️⃣ I'll wait a couple of seconds, transcribe media, OCR images and "
-            "assemble one document labeled with sender names.\n"
-            "3️⃣ Pick an action on the keyboard or tap “✍️ Custom prompt”.\n"
-            "4️⃣ You can attach context to a custom prompt — a file or a link.\n\n"
-            "Commands:\n/reset — clear the batch\n/pro — upgrade to Pro\n"
-            "🔒 /privacy — how we handle your data"
+            "👋 Hi! I turn forwarded messages into a finished result.\n\n"
+            "1️⃣ Forward or send several messages in a row — text, voice, video notes, "
+            "videos, audio, documents, photos. I transcribe media and read text from photos.\n"
+            "2️⃣ Pick an action on the keyboard — or just type your prompt.\n"
+            "3️⃣ Before running, you can add context: text, a file, or a link.\n\n"
+            "The answer comes back in the language of your messages.\n"
+            "/help — details · /plans — pricing"
         ),
         "reset_done": "🧹 Batch cleared. Send new messages.",
         "help": (
-            "ℹ️ How it works:\n"
-            "• Forward or send several messages in a row (text, voice, video notes, "
-            "videos, audio, documents, photos).\n"
-            "• I transcribe media, OCR images and assemble one document labeled with "
-            "sender names.\n"
-            "• Pick an action — it appears as a command you can extend with context "
-            "(text, file, or link), then “▶️ Run”.\n"
-            "• Or just type your prompt — it runs against the current batch.\n\n"
-            "Commands: /start, /reset, /help, /lang, /pro, /plans, /usage\n"
-            "/setkey, /removekey — your OpenRouter key · /prompts — saved prompts\n"
-            "/invite — refer friends · /privacy, /forgetme — your data\n"
-            "/models — pick a model per task (with your own /setkey)"
+            "ℹ️ How it works\n"
+            "Forward several messages (text, voice, video notes, videos, audio, "
+            "documents, photos). I transcribe media, read text from photos, and assemble "
+            "one document labeled with sender names.\n"
+            "Then pick an action on the keyboard or just type your prompt. You can add "
+            "context (text, a file, or a link) to any action, or tap “▶️ Run” without it. "
+            "For a presentation you can attach your own .pptx/.potx template.\n"
+            "Files up to 20 MB, long audio is split automatically, long answers arrive as "
+            "a file. The answer is in the language of your messages.\n\n"
+            "Commands\n"
+            "• Everyday: /start, /reset, /help, /lang\n"
+            "• Plan & limits: /plans, /pro, /usage\n"
+            "• Your key & models: /setkey, /removekey, /models\n"
+            "• Prompts: /prompts (saved)\n"
+            "• Friends & data: /invite, /privacy, /forgetme\n"
+            "• In groups: /summary, /ask, /actions, /clear"
         ),
         "lang_choose": "Choose interface language:",
         "lang_set": "✅ Language set to English.",
         "finalizing": "🛠 Processing the batch (transcription, OCR)…",
         "empty_batch": "The batch is empty — nothing to process.",
-        "batch_ready": "✅ Batch ready. What should I do?",
+        "batch_ready": "✅ Batch ready. Pick an action — or just type your prompt.",
         "batch_limit_reached": (
             "⚠️ Reached the limit of {limit} messages per batch. Extra messages ignored."
         ),
@@ -364,10 +379,10 @@ TEXTS: dict[str, dict[str, str]] = {
         "image_failed": "😕 Couldn't generate the image.",
         "action_summary": "📝 Summary",
         "action_structure": "📋 Structure",
-        "action_reply": "💬 Draft reply",
-        "action_email": "✉️ Follow-up email",
+        "action_reply": "💬 Reply",
+        "action_email": "✉️ Follow-up",
         "action_items": "✅ Action items",
-        "action_translate": "🌐 Translate (EN)",
+        "action_translate": "🌐 Translate EN",
         "action_presentation": "📊 Presentation",
         "action_pdf": "📄 PDF",
         "action_image": "🎨 Image",
@@ -498,41 +513,55 @@ TEXTS: dict[str, dict[str, str]] = {
         "models_modality_warn": "⚠️ Heads up: that model may not support this task's input/output — set anyway.",
         "models_reset_done": "↺ Reset to the default model for this task.",
         "models_reset_all_done": "↺ All slots reset to defaults.",
+        # --- Moved out of handlers / contextual hints ---
+        "invoice_title": "Forwardly Pro",
+        "invoice_description": "Pro for 30 days: images, presentations, higher limits and context.",
+        "presentation_context_hint": (
+            "📊 You can attach your own .pptx/.potx template and/or add text, a file, or "
+            "a link, then send — or tap ▶️ Run."
+        ),
+        "save_prompt_offer": "💾 Save this prompt to run it again later?",
+        "btn_confirm_delete": "✅ Yes, delete",
+        "btn_cancel": "✖️ Cancel",
+        "forgetme_cancelled": "Cancelled — your data is untouched.",
+        "stars_renew_note": "Stars subscription auto-renews; cancel it in Telegram. Crypto is a one-off for 30 days.",
+        "models_default": "default",
     },
     # ================================================================= UK ===
     "uk": {
         "welcome": (
-            "👋 Привіт! Я збираю пачку повідомлень і перетворюю її на текст, "
-            "з яким можна працювати через LLM.\n\n"
-            "1️⃣ Перешліть або надішліть кілька повідомлень поспіль — текст, "
-            "голосові, кружечки, відео, аудіо, документи чи фото.\n"
-            "2️⃣ Я зачекаю кілька секунд, розшифрую медіа, розпізнаю текст з "
-            "зображень і зберу все в один документ з іменами відправників.\n"
-            "3️⃣ Оберіть дію на клавіатурі або натисніть «✍️ Свій запит».\n"
-            "4️⃣ До свого запиту можна додати контекст — файл або посилання.\n\n"
-            "Команди:\n/reset — очистити пачку\n/pro — перейти на Pro\n"
-            "🔒 /privacy — як ми обробляємо дані"
+            "👋 Привіт! Я перетворюю переслані повідомлення на готовий результат.\n\n"
+            "1️⃣ Перешліть або надішліть поспіль кілька повідомлень — текст, голосові, "
+            "кружечки, відео, аудіо, документи, фото. Медіа розшифрую, текст із фото розпізнаю.\n"
+            "2️⃣ Оберіть дію на клавіатурі — або просто напишіть свій запит текстом.\n"
+            "3️⃣ Перед запуском можна додати контекст: текст, файл або посилання.\n\n"
+            "Відповідь приходить мовою вихідних повідомлень.\n"
+            "/help — докладніше · /plans — тарифи"
         ),
         "reset_done": "🧹 Пачку очищено. Надсилайте нові повідомлення.",
         "help": (
-            "ℹ️ Як це працює:\n"
-            "• Перешліть або надішліть кілька повідомлень поспіль (текст, голосові, "
-            "кружечки, відео, аудіо, документи, фото).\n"
-            "• Я розшифрую медіа, розпізнаю текст із зображень і зберу все в один "
-            "документ з іменами відправників.\n"
-            "• Оберіть дію на клавіатурі — вона з'явиться як команда, до якої можна "
-            "додати контекст (текст, файл або посилання), потім «▶️ Запустити».\n"
-            "• Або просто напишіть свій запит текстом — він виконається за поточною пачкою.\n\n"
-            "Команди: /start, /reset, /help, /lang, /pro, /plans, /usage\n"
-            "/setkey, /removekey — свій ключ OpenRouter · /prompts — збережені запити\n"
-            "/invite — запросити друзів · /privacy, /forgetme — дані\n"
-            "/models — обрати модель під кожну задачу (зі своїм ключем /setkey)"
+            "ℹ️ Як це працює\n"
+            "Перешліть кілька повідомлень (текст, голосові, кружечки, відео, аудіо, "
+            "документи, фото). Я розшифрую медіа, розпізнаю текст із фото й зберу все в "
+            "один документ з іменами відправників.\n"
+            "Далі оберіть дію на клавіатурі або просто напишіть свій запит. До будь-якої "
+            "дії можна додати контекст (текст, файл або посилання) чи натиснути "
+            "«▶️ Запустити» без нього. Для презентації можна додати свій шаблон .pptx/.potx.\n"
+            "Файли — до 20 МБ, довге аудіо ділю автоматично, довгу відповідь надсилаю "
+            "файлом. Відповідь — мовою вихідних повідомлень.\n\n"
+            "Команди\n"
+            "• Основні: /start, /reset, /help, /lang\n"
+            "• Тариф і ліміти: /plans, /pro, /usage\n"
+            "• Свій ключ і моделі: /setkey, /removekey, /models\n"
+            "• Запити: /prompts (збережені)\n"
+            "• Друзі та дані: /invite, /privacy, /forgetme\n"
+            "• У групах: /summary, /ask, /actions, /clear"
         ),
         "lang_choose": "Обери мову інтерфейсу:",
         "lang_set": "✅ Мова інтерфейсу — українська.",
         "finalizing": "🛠 Обробляю пачку (розшифрування, розпізнавання)…",
         "empty_batch": "Пачка порожня — немає що обробляти.",
-        "batch_ready": "✅ Пачка готова. Що зробити?",
+        "batch_ready": "✅ Пачка готова. Оберіть дію — або просто напишіть свій запит.",
         "batch_limit_reached": (
             "⚠️ Досягнуто ліміту в {limit} повідомлень на пачку. "
             "Зайві повідомлення проігноровано."
@@ -590,16 +619,16 @@ TEXTS: dict[str, dict[str, str]] = {
         "presentation_failed": "😕 Не вдалося зібрати презентацію.",
         "pdf_failed": "😕 Не вдалося зібрати PDF.",
         "image_failed": "😕 Не вдалося згенерувати зображення.",
-        "action_summary": "📝 Короткий зміст",
-        "action_structure": "📋 Структурувати",
-        "action_reply": "💬 Чернетка відповіді",
-        "action_email": "✉️ Follow-up лист",
-        "action_items": "✅ Завдання і рішення",
-        "action_translate": "🌐 Перекласти (EN)",
+        "action_summary": "📝 Стисло",
+        "action_structure": "📋 Структура",
+        "action_reply": "💬 Відповідь",
+        "action_email": "✉️ Лист",
+        "action_items": "✅ Завдання",
+        "action_translate": "🌐 Переклад EN",
         "action_presentation": "📊 Презентація",
         "action_pdf": "📄 PDF",
         "action_image": "🎨 Зображення",
-        "action_custom": "✍️ Або просто напишіть свій запит ⬇️",
+        "action_custom": "✍️ Або просто напишіть запит ⬇️",
         # --- Monetization / account ---
         "paywall_image": "🎨 Генерація зображень доступна на Pro.",
         "paywall_pptx": "📊 Презентації доступні на Pro.",
@@ -727,5 +756,18 @@ TEXTS: dict[str, dict[str, str]] = {
         "models_modality_warn": "⚠️ Увага: модель може не підтримувати вхід/вихід для цієї задачі — все одно збережено.",
         "models_reset_done": "↺ Повернено типову модель для цієї задачі.",
         "models_reset_all_done": "↺ Усі слоти скинуто до типових.",
+        # --- Moved out of handlers / contextual hints ---
+        "invoice_title": "Forwardly Pro",
+        "invoice_description": "Pro на 30 днів: зображення, презентації, більші ліміти та контекст.",
+        "presentation_context_hint": (
+            "📊 Можна додати свій шаблон .pptx/.potx та/або текст, файл чи посилання, "
+            "потім надішліть — або натисніть ▶️ Запустити."
+        ),
+        "save_prompt_offer": "💾 Зберегти цей запит, щоб запускати його повторно?",
+        "btn_confirm_delete": "✅ Так, видалити",
+        "btn_cancel": "✖️ Скасувати",
+        "forgetme_cancelled": "Скасовано — дані не змінено.",
+        "stars_renew_note": "Підписка Stars продовжується автоматично; скасувати — у Telegram. Оплата криптою разова, на 30 днів.",
+        "models_default": "типова",
     },
 }

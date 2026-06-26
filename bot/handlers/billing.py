@@ -85,10 +85,11 @@ def build_router(ctx: AppContext) -> Router:
 
     async def show_purchase_options(message: Message, lang: str) -> None:
         """Shared 'choose how to pay' screen, used by /pro and the upgrade button."""
-        await message.answer(
-            t("pro_benefits", lang).format(stars=s.pro_price_stars, usdt=s.pro_price_usdt),
-            reply_markup=_purchase_keyboard(lang),
+        text = (
+            t("pro_benefits", lang).format(stars=s.pro_price_stars, usdt=s.pro_price_usdt)
+            + "\n\n" + t("stars_renew_note", lang)
         )
+        await message.answer(text, reply_markup=_purchase_keyboard(lang))
 
     # --- /pro -----------------------------------------------------------
     @router.message(Command("pro"))
@@ -126,12 +127,13 @@ def build_router(ctx: AppContext) -> Router:
     @router.callback_query(F.data == "buy:stars")
     async def buy_stars(callback: CallbackQuery, bot: Bot) -> None:
         await callback.answer()
+        lang = _lang(callback.message)
         # Native 30-day Stars subscription (provider_token empty for XTR).
         await bot(
             _SendInvoiceWithSubscription(
                 chat_id=callback.message.chat.id,
-                title="Forwardly Pro",
-                description="Pro for 30 days: images, presentations, bigger context.",
+                title=t("invoice_title", lang),
+                description=t("invoice_description", lang),
                 payload="pro_sub",
                 provider_token="",
                 currency="XTR",

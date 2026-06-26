@@ -116,8 +116,8 @@ def build_router(ctx: AppContext) -> Router:
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [
-                    InlineKeyboardButton(text="✅", callback_data="forget:yes"),
-                    InlineKeyboardButton(text="❌", callback_data="forget:no"),
+                    InlineKeyboardButton(text=t("btn_confirm_delete", lang), callback_data="forget:yes"),
+                    InlineKeyboardButton(text=t("btn_cancel", lang), callback_data="forget:no"),
                 ]
             ]
         )
@@ -132,7 +132,7 @@ def build_router(ctx: AppContext) -> Router:
             ctx.store.clear_session(callback.message.chat.id)
             await callback.message.edit_text(t("forgetme_done", lang))
         else:
-            await callback.message.edit_text("❌")
+            await callback.message.edit_text(t("forgetme_cancelled", lang))
 
     # --- Saved prompts ---------------------------------------------------
     @router.callback_query(F.data == "save_prompt")

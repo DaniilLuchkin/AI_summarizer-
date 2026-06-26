@@ -55,9 +55,11 @@ def build_router(ctx: AppContext) -> Router:
             return
 
         # Predefined: the bold command IS the echo; then offer context / Run.
+        # Presentation gets a tailored hint (it can take a .pptx/.potx template).
         label = t(label_key(key), lang)
+        hint_key = "presentation_context_hint" if key == "presentation" else "action_context_hint"
         await message.answer(f"<b>{label}</b>", parse_mode="HTML")
-        await message.answer(t("action_context_hint", lang), reply_markup=build_run_keyboard(lang))
+        await message.answer(t(hint_key, lang), reply_markup=build_run_keyboard(lang))
 
     # --- Run staged action with no added context ------------------------
     @router.callback_query(ActionStates.awaiting_input, F.data == RUN_CB)

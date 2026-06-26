@@ -68,7 +68,7 @@ def build_router(ctx: AppContext) -> Router:
         rows: list[list[InlineKeyboardButton]] = []
         for slot in SLOTS:
             override = prefs.get(slot)
-            shown = override if override else f"default: {await ctx.models.resolve(uid, slot)}"
+            shown = override or f"{t('models_default', lang)}: {await ctx.models.resolve(uid, slot)}"
             lines.append(f"{_SLOT_EMOJI[slot]} {t(_SLOT_LABEL[slot], lang)}: {shown}")
             rows.append(
                 [InlineKeyboardButton(
