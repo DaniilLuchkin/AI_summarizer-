@@ -27,7 +27,7 @@ from aiogram.types import (
 
 from bot import texts
 from bot.handlers import execute
-from bot.handlers.run import build_actions_keyboard
+from bot.handlers.run import build_actions_keyboard, build_upgrade_keyboard
 from bot.runtime import AppContext
 from bot.services import media, transcribe, vision
 from bot.services.batch import ChatState
@@ -183,9 +183,12 @@ async def _finalize(ctx: AppContext, chat_state: ChatState, bot: Bot) -> None:
         await bot.send_message(chat_state.chat_id, t("empty_batch", lang))
         return
 
-    # If any item was skipped due to a daily/quota limit, nudge toward Pro.
+    # If any item was skipped due to a daily/quota limit, nudge toward Pro
+    # with a one-tap upgrade button on the hint message.
     if limited:
-        await bot.send_message(chat_state.chat_id, t("upgrade_hint", lang))
+        await bot.send_message(
+            chat_state.chat_id, t("upgrade_hint", lang), reply_markup=build_upgrade_keyboard(lang)
+        )
 
     await bot.send_message(
         chat_state.chat_id, t("batch_ready", lang), reply_markup=build_actions_keyboard(lang)

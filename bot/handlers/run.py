@@ -18,6 +18,14 @@ logger = logging.getLogger(__name__)
 # Callback data prefixes / constants.
 ACTION_CB_PREFIX = "act:"   # act:<key> — stage a predefined action or custom
 RUN_CB = "run:now"          # run the staged action without added context
+UPGRADE_CB = "upgrade"      # open the Pro purchase options (handled in billing)
+
+
+def build_upgrade_keyboard(lang: str) -> InlineKeyboardMarkup:
+    """One-tap "⭐ Upgrade to Pro" button, attached to every paywall/limit reply."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[[InlineKeyboardButton(text=t("btn_upgrade", lang), callback_data=UPGRADE_CB)]]
+    )
 
 
 class ActionStates(StatesGroup):

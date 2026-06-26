@@ -18,7 +18,7 @@ from aiogram.types import (
     Message,
 )
 
-from bot.handlers.run import build_actions_keyboard, run_llm
+from bot.handlers.run import build_actions_keyboard, build_upgrade_keyboard, run_llm
 from bot.prompts import (
     CUSTOM_SYSTEM,
     IMAGE_PROMPT_SYSTEM,
@@ -48,8 +48,12 @@ _LIMIT_TEXT = {
 }
 
 
-def _limit_message(reason: str | None, lang: str) -> str:
-    return t(_LIMIT_TEXT.get(reason or "generic", "paywall_generic"), lang)
+async def _send_paywall(message: Message, reason: str | None, lang: str) -> None:
+    """Send a brief limit/paywall message with a one-tap upgrade button."""
+    text = t(_LIMIT_TEXT.get(reason or "generic", "paywall_generic"), lang)
+    await message.answer(
+        f"{text}\n{t('see_plans_hint', lang)}", reply_markup=build_upgrade_keyboard(lang)
+    )
 
 
 # --- Context gathering ---------------------------------------------------
@@ -172,7 +176,7 @@ async def run_staged(
         await message.answer(t("generic_error", lang))
         return
     if not ok:
-        await message.answer(_limit_message(reason, lang))
+        await _send_paywall(message, reason, lang)
         return
 
     api_key = await ctx.quota.api_key_for(user_id)
