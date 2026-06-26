@@ -1,8 +1,12 @@
 """Batch collection: debounce incoming messages, then finalize into one document.
 
-Each finalized item is labeled with the sender's display name and a technical
-"kind" tag, e.g. `[1] Иван Петров (voice → transcript): …`. The per-chat UI
-language is set when a new batch starts and used for all status messages.
+Entry rules (default FSM state):
+  * plain typed text while a batch is active -> run as a custom prompt (Change 2),
+  * otherwise append to the current batch (starting a new one if the previous
+    batch was already finalized) and (re)arm the debounce timer.
+
+`handle_incoming` / `is_new_batch_trigger` are also reused by actions.py when a
+forwarded message arrives while an action is staged.
 """
 
 from __future__ import annotations
@@ -11,6 +15,7 @@ import asyncio
 import logging
 
 from aiogram import Bot, Router
+from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
     Message,
@@ -21,6 +26,7 @@ from aiogram.types import (
 )
 
 from bot import texts
+from bot.handlers import execute
 from bot.handlers.run import build_actions_keyboard
 from bot.runtime import AppContext
 from bot.services import media, transcribe, vision
@@ -35,32 +41,59 @@ logger = logging.getLogger(__name__)
 def build_router(ctx: AppContext) -> Router:
     router = Router(name="collect")
 
-    @router.message()
+    # Only handle messages in the default state; staged-action / custom states
+    # are handled by actions.py.
+    @router.message(StateFilter(None))
     async def collect(message: Message, state: FSMContext, bot: Bot) -> None:
-        """Catch-all for default-state messages -> batch collection."""
-        chat_state = ctx.store.get_or_create(message.chat.id)
-
-        # A fresh message after a finalized batch starts a new batch.
-        if chat_state.has_active_batch:
-            ctx.store.start_new_batch(chat_state)
-            await state.clear()
-
-        # Set/refresh the UI language at the start of each new batch.
-        if not chat_state.pending:
-            chat_state.lang = resolve_lang(message.from_user.language_code)
-
-        added = ctx.store.add_pending(chat_state, message)
-        if not added and not chat_state.limit_notified:
-            chat_state.limit_notified = True
-            await message.answer(
-                t("batch_limit_reached", chat_state.lang).format(
-                    limit=ctx.settings.max_batch_messages
-                )
-            )
-
-        _reschedule_finalize(ctx, chat_state, bot)
+        await handle_incoming(ctx, message, state, bot)
 
     return router
+
+
+def is_new_batch_trigger(message: Message) -> bool:
+    """A forwarded message or directly-sent media starts a new batch.
+
+    Plain typed text and a directly-attached document are NOT triggers (they are
+    a custom prompt / context respectively).
+    """
+    if message.forward_origin is not None:
+        return True
+    return bool(
+        message.voice or message.audio or message.video or message.video_note or message.photo
+    )
+
+
+def _is_plain_text(message: Message) -> bool:
+    """Directly-sent (non-forwarded) text message."""
+    return bool(message.text) and message.forward_origin is None
+
+
+async def handle_incoming(ctx: AppContext, message: Message, state: FSMContext, bot: Bot) -> None:
+    """Route an incoming default-state message to custom-prompt or collection."""
+    chat_state = ctx.store.get_or_create(message.chat.id)
+
+    # Typed text against an already-finalized batch -> custom prompt (no tap).
+    if chat_state.has_active_batch and _is_plain_text(message):
+        await execute.run_typed_custom(ctx, message, bot, chat_state.lang)
+        return
+
+    # A fresh message after a finalized batch starts a new batch.
+    if chat_state.has_active_batch:
+        ctx.store.start_new_batch(chat_state)
+        await state.clear()
+
+    # Set/refresh the UI language at the start of each new batch.
+    if not chat_state.pending:
+        chat_state.lang = resolve_lang(message.from_user.language_code)
+
+    added = ctx.store.add_pending(chat_state, message)
+    if not added and not chat_state.limit_notified:
+        chat_state.limit_notified = True
+        await message.answer(
+            t("batch_limit_reached", chat_state.lang).format(limit=ctx.settings.max_batch_messages)
+        )
+
+    _reschedule_finalize(ctx, chat_state, bot)
 
 
 def _reschedule_finalize(ctx: AppContext, chat_state: ChatState, bot: Bot) -> None:
@@ -95,7 +128,6 @@ async def _finalize(ctx: AppContext, chat_state: ChatState, bot: Bot) -> None:
     lang = chat_state.lang
     user_id = pending[0].from_user.id if pending[0].from_user else 0
 
-    # Batch-level rate limit (counts one finalized batch).
     allowed, reset_in = ctx.limiter.check_batch(user_id)
     if not allowed:
         minutes = max(1, round(reset_in / 60))
@@ -151,8 +183,7 @@ def _sender_name(message: Message, lang: str) -> str:
     """Display name of who sent the (possibly forwarded) message."""
     origin = message.forward_origin
     if origin is None:
-        # Directly sent by the bot's interlocutor -> localized "You".
-        return t("label_you", lang)
+        return t("label_you", lang)  # directly sent by the interlocutor
     if isinstance(origin, MessageOriginUser):
         return origin.sender_user.full_name
     if isinstance(origin, MessageOriginHiddenUser):
@@ -165,7 +196,6 @@ def _sender_name(message: Message, lang: str) -> str:
 
 
 def _kind(msg: Message) -> str:
-    """Technical (English) label for a message's primary content type."""
     if msg.voice:
         return texts.KIND_VOICE
     if msg.video_note:
@@ -184,10 +214,7 @@ def _kind(msg: Message) -> str:
 async def _process_message(
     ctx: AppContext, bot: Bot, msg: Message, index: int, name: str
 ) -> tuple[str | None, str | None]:
-    """Convert one message into a labeled context line.
-
-    Returns (item_text, optional_note). item_text is None if nothing usable.
-    """
+    """Convert one message into a labeled context line."""
     caption = (msg.caption or "").strip()
     lang = ctx.store.get_or_create(msg.chat.id).lang
 
@@ -223,7 +250,7 @@ async def _process_message(
         return _label(index, name, texts.KIND_VIDEO, _join(transcript, caption)), None
 
     if msg.photo:
-        largest = msg.photo[-1]  # last size is the biggest
+        largest = msg.photo[-1]
         data = await media.download(bot, largest.file_id)
         extracted = await vision.describe_image(ctx.orclient, data)
         return _label(index, name, texts.KIND_PHOTO, _join(extracted, caption)), None
@@ -249,7 +276,6 @@ def _join(primary: str | None, caption: str) -> str:
 
 
 def _audio_format(mime: str | None, filename: str | None) -> str:
-    """Best-effort container format for the transcription request."""
     if filename and "." in filename:
         ext = filename.rsplit(".", 1)[-1].lower()
         if ext in {"mp3", "m4a", "wav", "ogg", "flac", "webm", "mp4"}:

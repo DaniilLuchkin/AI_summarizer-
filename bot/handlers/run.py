@@ -1,8 +1,4 @@
-"""Shared helpers: the actions keyboard and the rate-limited LLM text call.
-
-Used by the actions handler and the custom-prompt handler so the guardrail /
-call / output logic lives in one place.
-"""
+"""Shared helpers: FSM states, keyboards, and the rate-limited LLM text call."""
 
 from __future__ import annotations
 
@@ -12,40 +8,58 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from bot.output import send_result
-from bot.prompts import KEYBOARD_ORDER, label_key
+from bot.prompts import CUSTOM_KEY, KEYBOARD_ORDER, label_key
 from bot.runtime import AppContext
 from bot.services.openrouter import OpenRouterError
 from bot.texts import t
 
 logger = logging.getLogger(__name__)
 
-# Callback data prefix for action buttons, e.g. "act:summary".
-ACTION_CB_PREFIX = "act:"
+# Callback data prefixes / constants.
+ACTION_CB_PREFIX = "act:"   # act:<key> — stage a predefined action or custom
+RUN_CB = "run:now"          # run the staged action without added context
 
 
-class CustomStates(StatesGroup):
-    """FSM for the custom-prompt flow."""
+class ActionStates(StatesGroup):
+    """A predefined action (or custom) is staged, awaiting optional context."""
 
-    waiting_for_instruction = State()  # user is typing their instruction
-    waiting_for_context = State()      # bot asked whether to attach context
+    awaiting_input = State()  # FSM data holds {"action_key": <key>}
 
 
 def build_actions_keyboard(lang: str) -> InlineKeyboardMarkup:
-    """Inline keyboard with all actions, labels localized via texts.py."""
+    """Predefined actions in a 2-per-row grid, custom button full-width at bottom."""
     rows: list[list[InlineKeyboardButton]] = []
     row: list[InlineKeyboardButton] = []
     for key in KEYBOARD_ORDER:
+        if key == CUSTOM_KEY:
+            continue  # custom gets its own full-width bottom row
         row.append(
             InlineKeyboardButton(
                 text=t(label_key(key), lang), callback_data=f"{ACTION_CB_PREFIX}{key}"
             )
         )
-        if len(row) == 2:  # two buttons per row reads well on phones
+        if len(row) == 2:
             rows.append(row)
             row = []
     if row:
         rows.append(row)
+    # Bottom-most, full-width "or just type your prompt ⬇️" button.
+    rows.append(
+        [
+            InlineKeyboardButton(
+                text=t(label_key(CUSTOM_KEY), lang),
+                callback_data=f"{ACTION_CB_PREFIX}{CUSTOM_KEY}",
+            )
+        ]
+    )
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def build_run_keyboard(lang: str) -> InlineKeyboardMarkup:
+    """Single "▶️ Run" button shown under a staged action."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[[InlineKeyboardButton(text=t("btn_run", lang), callback_data=RUN_CB)]]
+    )
 
 
 async def run_llm(

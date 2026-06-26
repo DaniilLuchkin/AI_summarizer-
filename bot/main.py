@@ -13,7 +13,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from bot.config import Settings
-from bot.handlers import actions, collect, commands, custom
+from bot.handlers import actions, collect, commands
 from bot.middleware import AccessMiddleware
 from bot.runtime import AppContext
 from bot.services.batch import BatchStore
@@ -27,15 +27,14 @@ def build_dispatcher(ctx: AppContext) -> Dispatcher:
     """Create the dispatcher, register the access middleware and all routers.
 
     Router order matters: commands first (so /start, /reset win in any state),
-    then callbacks, then the state-filtered custom handler, then the catch-all
-    collector (which only runs in the default state).
+    then the actions router (callbacks + the staged-input state), then the
+    catch-all collector (which only runs in the default state).
     """
     dp = Dispatcher(storage=MemoryStorage())
     dp.update.outer_middleware(AccessMiddleware(ctx.settings))
 
     dp.include_router(commands.build_router(ctx))
     dp.include_router(actions.build_router(ctx))
-    dp.include_router(custom.build_router(ctx))
     dp.include_router(collect.build_router(ctx))
     return dp
 

@@ -34,9 +34,20 @@ def parse_slides(raw: str) -> dict:
     return data
 
 
-def build_pptx(data: dict) -> bytes:
-    """Render the slide dict into .pptx bytes using the default theme."""
-    prs = Presentation()
+def build_pptx(data: dict, template_bytes: bytes | None = None) -> bytes:
+    """Render the slide dict into .pptx bytes.
+
+    If `template_bytes` is given (a user-supplied .pptx/.potx), it is used as the
+    base so the company theme, master and layouts are preserved; our slides are
+    added on top. Falls back to the default theme if the template can't be opened.
+    """
+    if template_bytes:
+        try:
+            prs = Presentation(io.BytesIO(template_bytes))
+        except Exception:  # noqa: BLE001 - bad/unsupported template -> default
+            prs = Presentation()
+    else:
+        prs = Presentation()
 
     # Title slide.
     title_slide = prs.slides.add_slide(prs.slide_layouts[_TITLE_SLIDE])
