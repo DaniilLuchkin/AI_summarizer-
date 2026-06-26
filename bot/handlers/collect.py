@@ -160,7 +160,8 @@ async def _finalize(ctx: AppContext, chat_state: ChatState, bot: Bot) -> None:
         name = _sender_name(msg, lang)
         try:
             text, note, item_limited = await _process_message(
-                ctx, bot, msg, index, name, user_id, api_key, transcribe_model, vision_model
+                ctx, bot, msg, index, name, user_id, api_key, transcribe_model, vision_model,
+                chat_state,
             )
         except FileTooLarge:
             notes.append(t("skipped_too_large", lang).format(index=index, kind=kind))
@@ -232,7 +233,7 @@ def _kind(msg: Message) -> str:
 
 async def _process_message(
     ctx: AppContext, bot: Bot, msg: Message, index: int, name: str, user_id: int,
-    api_key: str | None, transcribe_model: str, vision_model: str
+    api_key: str | None, transcribe_model: str, vision_model: str, chat_state: ChatState,
 ) -> tuple[str | None, str | None, bool]:
     """Convert one message into a labeled context line.
 
@@ -256,12 +257,22 @@ async def _process_message(
         ok, _ = await ctx.quota.consume_photo(user_id, 1)
         if not ok:
             return _label(index, name, texts.KIND_PHOTO, t("item_not_ocr", lang)), None, True
-        text = await _cached_or_call(
-            ctx, largest.file_unique_id, "vision",
-            lambda data: vision.describe_image(ctx.orclient, data, api_key=api_key, model=vision_model),
-            lambda: media.download(bot, largest.file_id),
-        )
-        return _label(index, name, texts.KIND_PHOTO, _join(text, caption)), None, False
+        # Always download the bytes (cheap, no OpenRouter cost) so the photo can
+        # be reused on slides; the vision *text* is still cached to avoid re-billing.
+        data = await media.download(bot, largest.file_id)
+        text = await ctx.db.media_cache_get(largest.file_unique_id)
+        if text is None:
+            text = await vision.describe_image(
+                ctx.orclient, data, api_key=api_key, model=vision_model
+            )
+            await ctx.db.media_cache_put(largest.file_unique_id, "vision", text)
+        # Retain the bytes (under the memory cap) and tag the item so the model
+        # can reference it by id in a presentation's `image_ref`.
+        photo_id = ctx.store.retain_photo(chat_state, data, "image/jpeg", text)
+        body = _join(text, caption)
+        if photo_id is not None:
+            return f"[photo #{photo_id}] {name} (photo → ocr): {body}".strip(), None, False
+        return _label(index, name, texts.KIND_PHOTO, body), None, False
 
     if msg.document:
         data = await media.download(bot, msg.document.file_id)
@@ -308,17 +319,6 @@ async def _process_audio(ctx, bot, msg, index, name, caption, lang, user_id, api
         return None, note, False
     await ctx.db.media_cache_put(fuid, "transcript", transcript)
     return _label(index, name, kind, _join(transcript, caption)), None, False
-
-
-async def _cached_or_call(ctx, file_unique_id, kind, call_with_data, download):
-    """Return cached derived text, else download + call the model + cache it."""
-    cached = await ctx.db.media_cache_get(file_unique_id)
-    if cached is not None:
-        return cached
-    data = await download()
-    text = await call_with_data(data)
-    await ctx.db.media_cache_put(file_unique_id, kind, text)
-    return text
 
 
 def _label(index: int, name: str, kind: str, body: str) -> str:
