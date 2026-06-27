@@ -61,14 +61,14 @@ def _grid(keys: list[str], lang: str, locked: set[str] | None = None) -> list[li
 
 
 def build_actions_keyboard(lang: str) -> InlineKeyboardMarkup:
-    """Primary grid: the most-used actions, then Custom, then a 'More…' submenu."""
+    """Primary grid: the everyday text actions, a 'More…' submenu, then Custom."""
     rows = _grid(PRIMARY_ACTION_KEYS, lang)
+    rows.append([InlineKeyboardButton(text=t("btn_more", lang), callback_data=MORE_CB)])
     rows.append(
         [InlineKeyboardButton(
             text=t(label_key(CUSTOM_KEY), lang), callback_data=f"{ACTION_CB_PREFIX}{CUSTOM_KEY}"
         )]
     )
-    rows.append([InlineKeyboardButton(text=t("btn_more", lang), callback_data=MORE_CB)])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
