@@ -7,7 +7,9 @@ See https://openrouter.ai/docs for the exact request shapes.
 from __future__ import annotations
 
 import base64
+import json
 import logging
+from collections.abc import AsyncIterator
 
 import httpx
 
@@ -52,6 +54,53 @@ class OpenRouterClient:
         payload = {"model": model or self._settings.model_text, "messages": messages}
         data = await self._post("/chat/completions", payload, api_key=api_key)
         return self._extract_message(data)
+
+    async def chat_stream(
+        self, messages: list[dict], model: str | None = None, api_key: str | None = None
+    ) -> AsyncIterator[str]:
+        """Streaming chat completion: yields assistant text deltas as they arrive.
+
+        Parses the OpenAI-compatible SSE stream (`data: {...}` lines, terminated
+        by `data: [DONE]`). OpenRouter also emits `: ...` comment/keep-alive lines
+        which we ignore. `api_key` overrides the global key (bring-your-own-key).
+        """
+        payload = {
+            "model": model or self._settings.model_text,
+            "messages": messages,
+            "stream": True,
+        }
+        extra = {"Authorization": f"Bearer {api_key}"} if api_key else None
+        try:
+            async with self._client.stream(
+                "POST", "/chat/completions", json=payload, headers=extra
+            ) as resp:
+                if resp.status_code >= 400:
+                    body = (await resp.aread()).decode("utf-8", "replace")
+                    logger.error(
+                        "OpenRouter stream %s: %s", resp.status_code, body[:500]
+                    )
+                    raise OpenRouterError(
+                        f"OpenRouter {resp.status_code} on /chat/completions (stream)"
+                    )
+                async for line in resp.aiter_lines():
+                    line = line.strip()
+                    if not line or not line.startswith("data:"):
+                        continue
+                    data = line[len("data:"):].strip()
+                    if data == "[DONE]":
+                        break
+                    try:
+                        obj = json.loads(data)
+                    except json.JSONDecodeError:
+                        continue
+                    try:
+                        delta = obj["choices"][0]["delta"].get("content")
+                    except (KeyError, IndexError, TypeError):
+                        delta = None
+                    if delta:
+                        yield delta
+        except httpx.HTTPError as exc:  # network / timeout mid-stream
+            raise OpenRouterError(f"HTTP error streaming chat: {exc}") from exc
 
     # --- Vision ----------------------------------------------------------
     async def vision(
