@@ -16,7 +16,16 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from bot.handlers import collect, execute
-from bot.handlers.run import ACTION_CB_PREFIX, RUN_CB, ActionStates, build_run_keyboard
+from bot.handlers.run import (
+    ACTION_CB_PREFIX,
+    BACK_CB,
+    MORE_CB,
+    RUN_CB,
+    ActionStates,
+    build_actions_keyboard,
+    build_more_keyboard,
+    build_run_keyboard,
+)
 from bot.prompts import CUSTOM_KEY, label_key
 from bot.runtime import AppContext
 from bot.texts import resolve_lang, t
@@ -30,6 +39,33 @@ def build_router(ctx: AppContext) -> Router:
     def _lang(message: Message, fallback_code: str | None) -> str:
         # Override > detected > caller's language_code > en.
         return ctx.store.get_lang(message.chat.id) or resolve_lang(fallback_code)
+
+    # --- "More…" submenu navigation (swaps the keyboard in place) -------
+    @router.callback_query(F.data == MORE_CB)
+    async def on_more(callback: CallbackQuery) -> None:
+        await callback.answer()
+        if callback.message is None:
+            return
+        lang = _lang(callback.message, callback.from_user.language_code)
+        user = await ctx.quota.ensure_user(callback.from_user.id)
+        entitled = ctx.quota.is_pro(user) or ctx.quota.has_byo(user)
+        try:
+            await callback.message.edit_reply_markup(
+                reply_markup=build_more_keyboard(lang, entitled)
+            )
+        except Exception:  # noqa: BLE001 - message too old / unchanged
+            pass
+
+    @router.callback_query(F.data == BACK_CB)
+    async def on_back(callback: CallbackQuery) -> None:
+        await callback.answer()
+        if callback.message is None:
+            return
+        lang = _lang(callback.message, callback.from_user.language_code)
+        try:
+            await callback.message.edit_reply_markup(reply_markup=build_actions_keyboard(lang))
+        except Exception:  # noqa: BLE001
+            pass
 
     # --- Stage an action ------------------------------------------------
     @router.callback_query(F.data.startswith(ACTION_CB_PREFIX))

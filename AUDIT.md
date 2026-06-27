@@ -143,35 +143,31 @@ No behavior, pricing, or limit changes beyond these defect fixes.
 
 ---
 
-## 3. Proposed changes — NEED YOUR APPROVAL (not applied)
+## 3. Proposed changes — RESOLVED with your decisions
 
-### 3.1 Tighten the main action grid (10 → ~6 primary + “More…”)
-Ten first‑class actions is above the comfortable 5–7 range, and two pairs
-overlap (Summary≈Structure, Reply≈Email). **Proposed primary set:**
+### 3.1 Tighten the main action grid → **APPROVED & APPLIED**
+New layout (the gating/routing in `execute.py` is unchanged):
 
-> **Summary · Reply · Action items · Translate · ✍️ Custom · ✨ More…**
+> Primary: **📝 Summary · 💬 Reply · ✅ Action items · 🌐 Translate · ✍️ Custom · ✨ More…**
+> More…: **📋 Structure · ✉️ Follow‑up · 📊 Presentation · 📄 PDF · 🎨 Image · ⬅️ Back**
 
-…with **Structure, Follow‑up email, Presentation, PDF, Image** behind **“✨ More…”**.
-This keeps the common path one tap and de‑clutters without removing any feature.
-Alternative framing: split into **“Summarize/Reply” (read)** vs **“Create” (deck/
-PDF/image)** submenus. *Requires approval — touches `KEYBOARD_ORDER` + a new
-submenu callback.*
+“More…” swaps the keyboard in place (`more:open` / `more:back` callbacks in
+`actions.py`; `PRIMARY_ACTION_KEYS` / `MORE_ACTION_KEYS` in `prompts.py`).
 
-### 3.2 Mark Pro‑only actions in the grid
-Add a 🔒/“(Pro)” affordance (or a Pro section) to **Presentation** and **Image**
-so free users see they’re premium before tapping Run. Keeps the paywall, removes
-the surprise. *Approval needed (label/UX change).*
+### 3.2 Mark Pro‑only actions → **APPROVED & APPLIED**
+Presentation and Image show a **🔒** in the More… submenu **only for non‑Pro /
+non‑BYO users** (the submenu is built on a callback, so entitlement is known
+without extra plumbing). Pro/BYO users see no lock. The paywall‑on‑Run is
+unchanged.
 
-### 3.3 Possibly drop **PDF** (or demote to “More…”)
-PDF overlaps Structure/Summary as “make a tidy document” and is the lowest‑signal
-export. Options: keep, demote under “More…”, or remove. *Your call.*
+### 3.3 PDF → **move to “More…”, keep** (per your decision) — APPLIED
+PDF lives in the More… submenu (free, ungated). Not removed.
 
-### 3.4 Optional one‑tap “run now” default
-For predefined actions, consider running immediately with an inline “➕ add
-context / ↻ redo with context” affordance instead of always asking for context
-first — removes a tap from the common case. *Approval needed (changes the staged
-flow in `actions.py`).*
+### 3.4 One‑tap “run now” default → **keep current staged flow** (per your
+decision) — no change.
 
-### 3.5 Wire or delete `limit_audio` / `limit_photo` (C3)
-Either surface these when an audio/photo item is quota‑blocked (instead of only
-the generic per‑item note) or delete the keys. Left as‑is pending your preference.
+### 3.5 `limit_audio` / `limit_photo` → **keep limits, mark on exhaustion** (per
+your decision). Already satisfied: audio/photo limits are enforced in `quota.py`,
+each blocked item is marked (`item_not_transcribed` / `item_not_ocr`), and the
+batch shows an upgrade nudge. No change needed; the two extra keys remain
+available for future use.

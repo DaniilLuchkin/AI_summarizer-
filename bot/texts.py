@@ -139,6 +139,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "action_pdf": "📄 PDF",
         "action_image": "🎨 Картинка",
         "action_custom": "✍️ Или просто напишите запрос ⬇️",
+        "btn_more": "✨ Ещё…",
+        "btn_back": "⬅️ Назад",
         # --- Monetization / account ---
         "paywall_image": "🎨 Генерация изображений доступна на Pro.",
         "paywall_pptx": "📊 Презентации доступны на Pro.",
@@ -374,6 +376,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "action_pdf": "📄 PDF",
         "action_image": "🎨 Image",
         "action_custom": "✍️ Or just type your prompt ⬇️",
+        "btn_more": "✨ More…",
+        "btn_back": "⬅️ Back",
         # --- Monetization / account ---
         "paywall_image": "🎨 Image generation is a Pro feature.",
         "paywall_pptx": "📊 Presentations are a Pro feature.",
@@ -610,6 +614,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "action_pdf": "📄 PDF",
         "action_image": "🎨 Зображення",
         "action_custom": "✍️ Або просто напишіть запит ⬇️",
+        "btn_more": "✨ Ще…",
+        "btn_back": "⬅️ Назад",
         # --- Monetization / account ---
         "paywall_image": "🎨 Генерація зображень доступна на Pro.",
         "paywall_pptx": "📊 Презентації доступні на Pro.",

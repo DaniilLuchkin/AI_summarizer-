@@ -7,11 +7,15 @@ are language-agnostic (the model replies in the language of the source text).
 
 from __future__ import annotations
 
-# Order of buttons on the inline keyboard.
+# All text actions (used for routing/quota in execute.py — order-independent).
 TEXT_ACTION_KEYS = ["summary", "structure", "reply", "email", "items", "translate"]
-SPECIAL_ACTION_KEYS = ["presentation", "pdf", "image"]
 CUSTOM_KEY = "custom"
-KEYBOARD_ORDER = TEXT_ACTION_KEYS + SPECIAL_ACTION_KEYS + [CUSTOM_KEY]
+
+# Inline-keyboard layout: a tight primary grid + a "More…" submenu (so the first
+# screen stays at ~6 choices). PRO_ACTION_KEYS are flagged 🔒 for non-Pro users.
+PRIMARY_ACTION_KEYS = ["summary", "reply", "items", "translate"]
+MORE_ACTION_KEYS = ["structure", "email", "presentation", "pdf", "image"]
+PRO_ACTION_KEYS = {"presentation", "image"}
 
 
 def label_key(action_key: str) -> str:
