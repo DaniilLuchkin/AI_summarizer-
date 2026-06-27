@@ -110,6 +110,15 @@ class Settings(BaseSettings):
     group_window_pro: int = 400          # max messages summarized (Pro/BYO)
     group_cooldown_sec: int = 30         # min seconds between group LLM commands
 
+    # --- Output rendering & streaming -------------------------------------
+    # Render answers as formatted Telegram messages (MarkdownV2 via a vetted
+    # converter, then plain text) instead of raw markdown. Off -> plain text.
+    rich_messages_enabled: bool = True   # best-effort sendRichMessage on top
+    # Stream the model's text answer live (SSE) by editing a placeholder message.
+    streaming_enabled: bool = True
+    # Minimum gap between live edits while streaming (avoids Telegram throttling).
+    stream_throttle_ms: int = 1000
+
     # --- Logging ----------------------------------------------------------
     log_level: str = "INFO"
 

@@ -18,9 +18,9 @@ from aiogram import Bot, F, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import ChatMemberUpdated, Message
 
-from bot.output import send_result
 from bot.prompts import GROUP_ACTIONS_SYSTEM, GROUP_ASK_SYSTEM, GROUP_SUMMARY_SYSTEM
 from bot.runtime import AppContext
+from bot.services.delivery import deliver_answer
 from bot.services.group_buffer import BufferItem
 from bot.services.openrouter import OpenRouterError
 from bot.texts import resolve_lang, t
@@ -53,23 +53,25 @@ def build_router(ctx: AppContext) -> Router:
         api_key = await ctx.quota.api_key_for(invoker_id)
         model = await ctx.models.resolve(invoker_id, "text")
         try:
-            answer = await ctx.orclient.chat(
+            # Group answers stream + render like DMs; no .md to avoid file spam.
+            await deliver_answer(
+                message,
+                ctx,
+                lang,
                 [
                     {"role": "system", "content": system},
                     {"role": "user", "content": content},
                 ],
                 model=model,
                 api_key=api_key,
+                attach_md=False,
             )
         except OpenRouterError:
             logger.exception("Group LLM call failed")
             await message.reply(t("llm_error", lang))
-            return
         except Exception:  # noqa: BLE001
             logger.exception("Unexpected group LLM error")
             await message.reply(t("generic_error", lang))
-            return
-        await send_result(message, answer, lang)
 
     def _on_cooldown(chat_id: int) -> bool:
         return time.time() - last_run.get(chat_id, 0.0) < s.group_cooldown_sec

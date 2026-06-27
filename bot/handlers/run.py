@@ -7,9 +7,9 @@ import logging
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from bot.output import send_result
 from bot.prompts import CUSTOM_KEY, KEYBOARD_ORDER, label_key
 from bot.runtime import AppContext
+from bot.services.delivery import deliver_answer
 from bot.services.openrouter import OpenRouterError
 from bot.texts import t
 
@@ -79,23 +79,27 @@ async def run_llm(
     model: str | None = None,
     api_key: str | None = None,
     show_keyboard: bool = True,
+    attach_md: bool = False,
 ) -> None:
-    """Call the text model and send the result.
+    """Call the text model and deliver a cleanly rendered (streamed) result.
 
     Quota gating happens in execute.run_staged before calling this. `model` /
-    `api_key` support the Pro model and bring-your-own-key.
+    `api_key` support the Pro model and bring-your-own-key. `attach_md` attaches
+    the raw ``result.md`` (always on for Pro / BYO users).
     """
-    thinking = await message.answer(t("thinking", lang))
     try:
-        answer = await ctx.orclient.chat(
+        await deliver_answer(
+            message,
+            ctx,
+            lang,
             [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_content},
             ],
             model=model,
             api_key=api_key,
+            attach_md=attach_md,
         )
-        await send_result(message, answer, lang)
         if show_keyboard:
             await message.answer(t("followup_hint", lang), reply_markup=build_actions_keyboard(lang))
     except OpenRouterError:
@@ -104,8 +108,3 @@ async def run_llm(
     except Exception:  # noqa: BLE001 - never crash the polling loop
         logger.exception("Unexpected error during LLM call")
         await message.answer(t("generic_error", lang))
-    finally:
-        try:
-            await thinking.delete()
-        except Exception:  # noqa: BLE001
-            pass
