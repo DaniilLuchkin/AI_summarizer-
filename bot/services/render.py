@@ -1,15 +1,16 @@
 """Turn the model's raw markdown into clean, Telegram-ready output.
 
 The model answers in Markdown (## headings, **bold**, lists, `code`, links…).
-Sending that with ``parse_mode=None`` shows the literal syntax, so we render it:
+Sending that with ``parse_mode=None`` shows the literal syntax, so we render it
+to Telegram's **HTML** subset and send with ``parse_mode=HTML``:
 
-  1. **Rich message** (Bot API ``sendRichMessage``) — best-effort, native
-     rendering. Built here as an ``InputRichMessage``; the *send* attempt and
-     its fallback live in ``services.delivery`` (the method may be unsupported).
-  2. **MarkdownV2** — produced by ``telegramify-markdown``, a vetted converter
-     that escapes correctly (no fragile hand-rolled regex) and preserves
-     Unicode/Cyrillic. Split into <=4096-char chunks on safe boundaries.
-  3. **Plain text** — the ultimate fallback if Telegram rejects the markup.
+  markdown --[telegramify-markdown.convert]--> (plain text, Telegram entities)
+           --[aiogram html_decoration.unparse]--> safe HTML (<b>,<i>,<code>,<pre>,
+           <a>,<blockquote>,<s>,<u>…)
+
+Both halves are vetted libraries (no fragile hand-rolled regex), Unicode/Cyrillic
+safe. Each function also returns the matching plain text so a caller can resend
+with ``parse_mode=None`` if Telegram ever rejects the HTML (400).
 
 This module is pure (no Telegram I/O), so it is trivially unit-testable.
 """
@@ -17,51 +18,61 @@ This module is pure (no Telegram I/O), so it is trivially unit-testable.
 from __future__ import annotations
 
 import logging
+import re
 
 import telegramify_markdown
-from aiogram.types import InputRichMessage
+from aiogram.utils.text_decorations import html_decoration
 
 from bot.output import TELEGRAM_MESSAGE_LIMIT, _split_text
 
 logger = logging.getLogger(__name__)
 
+# aiogram renders code-block language as ``<code language="language-x">`` but
+# Telegram's documented HTML uses ``class="language-x"``. Normalise so code
+# blocks don't trip a needless plain-text fallback.
+_CODE_LANG = re.compile(r'<code language="(language-[^"]*)">')
 
-def markdownv2_chunks(text: str, limit: int = TELEGRAM_MESSAGE_LIMIT) -> list[str]:
-    """Render `text` to MarkdownV2 and split into valid <=limit chunks.
 
-    ``telegramify-markdown`` guarantees the escaping and the split never breaks
-    an entity (it is entity-aware), so each chunk is independently parseable.
-    Falls back to a single plain-split list if the converter ever errors.
+def to_html(text: str) -> tuple[str, str]:
+    """Render markdown `text` to (telegram_html, plain_text).
+
+    `plain_text` is the same content with the markup stripped — the exact string
+    to resend with ``parse_mode=None`` if Telegram rejects the HTML.
     """
     try:
-        md = telegramify_markdown.markdownify(text)
-        chunks = telegramify_markdown.split_markdownv2(md, max_utf16_len=limit)
-        # Defensive: drop empties, guarantee the contract (every chunk <= limit).
-        out = [c for c in chunks if c.strip()]
-        if out and all(len(c) <= limit for c in out):
-            return out
-    except Exception:  # noqa: BLE001 - any converter failure -> plain split
-        logger.exception("MarkdownV2 rendering failed; falling back to plain")
-    return plain_chunks(text, limit)
+        plain, entities = telegramify_markdown.convert(text)
+        html = html_decoration.unparse(plain, entities)
+        html = _CODE_LANG.sub(r'<code class="\1">', html)
+        return html, plain
+    except Exception:  # noqa: BLE001 - any converter failure -> plain passthrough
+        logger.exception("HTML rendering failed; falling back to plain text")
+        return text, text
+
+
+def html_chunks(
+    text: str, limit: int = TELEGRAM_MESSAGE_LIMIT
+) -> list[tuple[str, str]]:
+    """Render to HTML and split into <=limit (html, plain) chunks on boundaries.
+
+    Splitting happens on the *source* text (line/paragraph boundaries) and each
+    piece is rendered independently, so a chunk's HTML tags are always balanced
+    (a split never lands inside a tag). The common case (one chunk) is fast.
+    """
+    html, plain = to_html(text)
+    if len(html) <= limit:
+        return [(html, plain)]
+
+    out: list[tuple[str, str]] = []
+    for piece in _split_text(text, max(limit // 2, 1)) or [text]:
+        p_html, p_plain = to_html(piece)
+        if len(p_html) <= limit:
+            out.append((p_html, p_plain))
+        else:  # pathological: ship this piece as plain, hard-split to size
+            for raw in _split_text(p_plain, limit) or [p_plain[:limit]]:
+                out.append((raw, raw))
+    return out
 
 
 def plain_chunks(text: str, limit: int = TELEGRAM_MESSAGE_LIMIT) -> list[str]:
     """Split raw text into <=limit chunks on line/paragraph boundaries."""
     return _split_text(text, limit) or [text[:limit]]
-
-
-def build_rich(text: str) -> InputRichMessage | None:
-    """Build an ``InputRichMessage`` (HTML body) for a best-effort rich send.
-
-    Returns None if the converter can't produce one. The caller wraps the actual
-    ``sendRichMessage`` call so an unsupported method degrades to MarkdownV2.
-    """
-    try:
-        rich = telegramify_markdown.richify(text, mode="html")
-        if getattr(rich, "html", None):
-            return InputRichMessage(html=rich.html)
-        if getattr(rich, "markdown", None):
-            return InputRichMessage(markdown=rich.markdown)
-    except Exception:  # noqa: BLE001
-        logger.debug("Rich message build failed", exc_info=True)
-    return None

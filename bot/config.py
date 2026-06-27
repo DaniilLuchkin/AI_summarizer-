@@ -111,13 +111,14 @@ class Settings(BaseSettings):
     group_cooldown_sec: int = 30         # min seconds between group LLM commands
 
     # --- Output rendering & streaming -------------------------------------
-    # Render answers as formatted Telegram messages (MarkdownV2 via a vetted
-    # converter, then plain text) instead of raw markdown. Off -> plain text.
-    rich_messages_enabled: bool = True   # best-effort sendRichMessage on top
-    # Stream the model's text answer live (SSE) by editing a placeholder message.
+    # Stream the model's text answer live (SSE) via sendMessageDraft, falling
+    # back to an edited placeholder message. Off -> just send the final answer.
     streaming_enabled: bool = True
-    # Minimum gap between live edits while streaming (avoids Telegram throttling).
+    # Minimum gap (ms) between live draft/edit updates while streaming.
     stream_throttle_ms: int = 1000
+    # Answers longer than this (chars) are sent as result.md instead of a long
+    # chain of chat messages. Applies to everyone.
+    long_answer_chars: int = 3500
 
     # --- Logging ----------------------------------------------------------
     log_level: str = "INFO"

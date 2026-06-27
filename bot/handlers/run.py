@@ -79,13 +79,11 @@ async def run_llm(
     model: str | None = None,
     api_key: str | None = None,
     show_keyboard: bool = True,
-    attach_md: bool = False,
 ) -> None:
     """Call the text model and deliver a cleanly rendered (streamed) result.
 
     Quota gating happens in execute.run_staged before calling this. `model` /
-    `api_key` support the Pro model and bring-your-own-key. `attach_md` attaches
-    the raw ``result.md`` (always on for Pro / BYO users).
+    `api_key` support the Pro model and bring-your-own-key.
     """
     try:
         await deliver_answer(
@@ -98,7 +96,6 @@ async def run_llm(
             ],
             model=model,
             api_key=api_key,
-            attach_md=attach_md,
         )
         if show_keyboard:
             await message.answer(t("followup_hint", lang), reply_markup=build_actions_keyboard(lang))

@@ -53,7 +53,7 @@ def build_router(ctx: AppContext) -> Router:
         api_key = await ctx.quota.api_key_for(invoker_id)
         model = await ctx.models.resolve(invoker_id, "text")
         try:
-            # Group answers stream + render like DMs; no .md to avoid file spam.
+            # Group answers stream + render exactly like DMs.
             await deliver_answer(
                 message,
                 ctx,
@@ -64,7 +64,6 @@ def build_router(ctx: AppContext) -> Router:
                 ],
                 model=model,
                 api_key=api_key,
-                attach_md=False,
             )
         except OpenRouterError:
             logger.exception("Group LLM call failed")

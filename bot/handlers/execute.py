@@ -184,22 +184,16 @@ async def run_staged(
     api_key = await ctx.quota.api_key_for(user_id)
     # Per-task model resolution honours a BYO user's /models overrides.
     model = await ctx.models.resolve(user_id, "text")
-    # Pro / BYO users always get the raw markdown answer as result.md too.
-    user = await ctx.quota.ensure_user(user_id)
-    attach_md = ctx.quota.is_pro(user) or ctx.quota.has_byo(user)
 
     if action_key == "custom":
         content = _build_custom_content(document, added_text, parts)
         chat_state.last_custom_prompt = added_text.strip() or None
-        await run_llm(message, ctx, lang, CUSTOM_SYSTEM, content, model, api_key, attach_md=attach_md)
+        await run_llm(message, ctx, lang, CUSTOM_SYSTEM, content, model, api_key)
         if chat_state.last_custom_prompt:
             await _offer_save_prompt(message, lang)
     elif action_key in TEXT_ACTION_KEYS:
         content = _build_action_content(document, added_text, parts)
-        await run_llm(
-            message, ctx, lang, SYSTEM_PROMPTS[action_key], content, model, api_key,
-            attach_md=attach_md,
-        )
+        await run_llm(message, ctx, lang, SYSTEM_PROMPTS[action_key], content, model, api_key)
     elif action_key == "presentation":
         content = _build_action_content(document, added_text, parts)
         photos = {p["id"]: p["bytes"] for p in chat_state.photos}

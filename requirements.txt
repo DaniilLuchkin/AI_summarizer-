@@ -18,7 +18,8 @@ trafilatura==1.12.2
 python-pptx==1.0.2   # PPTX slide decks
 fpdf2==2.8.7         # Unicode/Cyrillic PDFs (uses system DejaVu font)
 
-# Clean Telegram rendering (markdown -> MarkdownV2 / rich, entity-aware split)
+# Clean Telegram rendering: markdown -> (text, entities), rendered to Telegram
+# HTML via aiogram's html_decoration (no fragile regex, Unicode-safe).
 telegramify-markdown==1.2.0
 
 # Persistence + secrets
