@@ -1,7 +1,6 @@
-"""Deliver a model text answer: live streaming -> clean rendered final -> file.
+"""Deliver a model text answer: live streaming -> plain-text messages.
 
-One entry point, ``deliver_answer``, replaces the old "thinking message + raw
-``send_result``" flow used by the private and group handlers.
+One entry point, ``deliver_answer``, used by the private and group handlers.
 
 Flow
 ----
@@ -10,9 +9,10 @@ Flow
    ~1/sec). The draft is an ephemeral ~30s preview.
 2. If ``sendMessageDraft`` isn't supported, fall back to a placeholder message
    that is live-edited (``editMessageText``, same throttle).
-3. On finish the answer is *persisted*: short/medium -> clean HTML message(s)
-   (``parse_mode=HTML``, split on boundaries, plain-text fallback on a 400);
-   large (> ``LONG_ANSWER_CHARS``) -> the raw markdown as ``result.md``.
+3. On finish the answer is *persisted* as real message(s). DEFAULT: markdown is
+   stripped and the text is smart-split into <=4096-char plain messages on
+   logical boundaries (no file). Only when the user explicitly asked do we send
+   a formatted HTML message (``formatted``) or a raw ``.md`` file (``as_file``).
 
 Exactly one result is persisted; the ephemeral draft never remains as the final
 answer. Every "new" API path is wrapped so an unsupported method or a parse
@@ -52,11 +52,15 @@ async def deliver_answer(
     *,
     model: str | None = None,
     api_key: str | None = None,
+    formatted: bool = False,
+    as_file: bool = False,
 ) -> None:
-    """Run the chat call (streaming if enabled) and deliver a clean answer.
+    """Run the chat call (streaming if enabled) and deliver the answer.
 
-    Raises ``OpenRouterError`` on model failure so callers keep their existing
-    error handling; send-side failures are handled here (fallback chain).
+    Default: clean plain text, smart-split into several messages. `formatted` /
+    `as_file` (set only when the user explicitly asks) switch to a formatted HTML
+    message or a raw ``.md`` file. Raises ``OpenRouterError`` on model failure so
+    callers keep their existing error handling.
     """
     s = ctx.settings
     placeholder: Message | None = None
@@ -71,7 +75,7 @@ async def deliver_answer(
         raise
 
     full = (full or "").strip() or "—"
-    await _finalize(message, full, lang, ctx, placeholder)
+    await _finalize(message, full, lang, placeholder, formatted=formatted, as_file=as_file)
 
 
 # --- Streaming -----------------------------------------------------------
@@ -139,15 +143,42 @@ async def _try_draft(message: Message, draft_id: int, text: str) -> bool:
 
 # --- Final persisted delivery -------------------------------------------
 async def _finalize(
-    message: Message, text: str, lang: str, ctx: AppContext, placeholder: Message | None
+    message: Message,
+    text: str,
+    lang: str,
+    placeholder: Message | None,
+    *,
+    formatted: bool,
+    as_file: bool,
 ) -> None:
-    if len(text) > ctx.settings.long_answer_chars:
-        # Too long for a clean chat message: ship the raw markdown as a file.
+    # Explicit ".md file" request: send the raw answer as a file (any length).
+    if as_file:
         await _safe_delete(placeholder)
         document = BufferedInputFile(text.encode("utf-8"), filename=texts.RESULT_FILENAME)
-        await message.answer_document(document, caption=t("long_result_heads_up", lang))
+        await message.answer_document(document, caption=t("result_file_caption", lang))
         return
-    await _send_html(message, text, placeholder)
+    # Explicit "with formatting / markdown" request: clean Telegram HTML.
+    if formatted:
+        await _send_html(message, text, placeholder)
+        return
+    # DEFAULT: plain prose, markdown stripped, smart-split into several messages.
+    chunks = render.split_plain(render.strip_markdown(text)) or ["—"]
+    await _send_plain(message, chunks, placeholder)
+
+
+async def _send_plain(message: Message, chunks: list[str], placeholder: Message | None) -> None:
+    """Send plain-text chunks; reuse the streaming placeholder as the first one."""
+    first = True
+    for chunk in chunks:
+        if first and placeholder is not None:
+            first = False
+            try:
+                await placeholder.edit_text(chunk, parse_mode=None)
+                continue
+            except TelegramBadRequest:
+                await _safe_delete(placeholder)  # unchanged/too-old -> send fresh
+        first = False
+        await message.answer(chunk, parse_mode=None)
 
 
 async def _send_html(message: Message, text: str, placeholder: Message | None) -> None:

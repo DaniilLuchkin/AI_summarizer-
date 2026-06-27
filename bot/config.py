@@ -115,9 +115,6 @@ class Settings(BaseSettings):
     streaming_enabled: bool = True
     # Minimum gap (ms) between live draft/edit updates while streaming.
     stream_throttle_ms: int = 1000
-    # Answers longer than this (chars) are sent as result.md instead of a long
-    # chain of chat messages. Applies to everyone.
-    long_answer_chars: int = 3500
 
     # --- Logging ----------------------------------------------------------
     log_level: str = "INFO"

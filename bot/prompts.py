@@ -36,10 +36,19 @@ SOURCE_LANG_INSTRUCTION = (
     "instruction explicitly requests a different language. "
 )
 
+# Plain-text rule: answers go straight into a chat, so no Markdown by default.
+PLAIN_TEXT_INSTRUCTION = (
+    "Write in plain prose. Do NOT use any Markdown: no '#' headings, no '*'/'_' "
+    "for bold or italic, no backticks or code fences, no '-'/'*' bullet markers, "
+    "no tables. Separate paragraphs with a blank line; if a list is unavoidable, "
+    "put each item on its own line, optionally starting with '• '. "
+)
+
 # Shared tail for predefined text actions.
 _COMMON = (
     NAME_INSTRUCTION
     + SOURCE_LANG_INSTRUCTION
+    + PLAIN_TEXT_INSTRUCTION
     + "Rely only on the provided text and do not invent facts."
 )
 
@@ -70,9 +79,9 @@ SYSTEM_PROMPTS: dict[str, str] = {
     ),
     "translate": (
         "You are a professional translator. Translate the entire combined text "
-        "into English, preserving meaning, tone and formatting. If there are "
-        "service labels like '[1] Name (...)', translate only the content part. "
-        + NAME_INSTRUCTION + SOURCE_LANG_INSTRUCTION
+        "into English, preserving meaning and tone. If there are service labels "
+        "like '[1] Name (...)', translate only the content part. "
+        + NAME_INSTRUCTION + SOURCE_LANG_INSTRUCTION + PLAIN_TEXT_INSTRUCTION
     ),
 }
 
@@ -154,7 +163,7 @@ CUSTOM_SYSTEM = (
 _GROUP_COMMON = (
     "You are summarizing a group chat. Respond in the dominant language of the "
     "messages. Attribute points to the named people. Be concise and factual; "
-    "rely only on the provided messages. "
+    "rely only on the provided messages. " + PLAIN_TEXT_INSTRUCTION
 )
 GROUP_SUMMARY_SYSTEM = (
     _GROUP_COMMON

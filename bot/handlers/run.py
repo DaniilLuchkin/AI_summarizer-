@@ -96,11 +96,14 @@ async def run_llm(
     model: str | None = None,
     api_key: str | None = None,
     show_keyboard: bool = True,
+    formatted: bool = False,
+    as_file: bool = False,
 ) -> None:
-    """Call the text model and deliver a cleanly rendered (streamed) result.
+    """Call the text model and deliver the (streamed) result as plain text.
 
     Quota gating happens in execute.run_staged before calling this. `model` /
-    `api_key` support the Pro model and bring-your-own-key.
+    `api_key` support the Pro model and bring-your-own-key. `formatted` / `as_file`
+    are set only when the user explicitly asked for formatting / a file.
     """
     try:
         await deliver_answer(
@@ -113,6 +116,8 @@ async def run_llm(
             ],
             model=model,
             api_key=api_key,
+            formatted=formatted,
+            as_file=as_file,
         )
         if show_keyboard:
             await message.answer(t("followup_hint", lang), reply_markup=build_actions_keyboard(lang))

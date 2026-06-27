@@ -31,7 +31,7 @@ from bot.prompts import (
 from bot.services import deck_design, deck_qa
 from bot.runtime import AppContext
 from bot.services import context as context_service
-from bot.services import media, pdf_builder, pptx_builder
+from bot.services import media, pdf_builder, pptx_builder, render
 from bot.services.media import FileTooLarge
 from bot.texts import t
 
@@ -184,16 +184,25 @@ async def run_staged(
     api_key = await ctx.quota.api_key_for(user_id)
     # Per-task model resolution honours a BYO user's /models overrides.
     model = await ctx.models.resolve(user_id, "text")
+    # Default answers are plain text; honor an explicit "markdown"/"file" ask.
+    as_file = render.wants_file(added_text)
+    formatted = as_file or render.wants_formatting(added_text)
 
     if action_key == "custom":
         content = _build_custom_content(document, added_text, parts)
         chat_state.last_custom_prompt = added_text.strip() or None
-        await run_llm(message, ctx, lang, CUSTOM_SYSTEM, content, model, api_key)
+        await run_llm(
+            message, ctx, lang, CUSTOM_SYSTEM, content, model, api_key,
+            formatted=formatted, as_file=as_file,
+        )
         if chat_state.last_custom_prompt:
             await _offer_save_prompt(message, lang)
     elif action_key in TEXT_ACTION_KEYS:
         content = _build_action_content(document, added_text, parts)
-        await run_llm(message, ctx, lang, SYSTEM_PROMPTS[action_key], content, model, api_key)
+        await run_llm(
+            message, ctx, lang, SYSTEM_PROMPTS[action_key], content, model, api_key,
+            formatted=formatted, as_file=as_file,
+        )
     elif action_key == "presentation":
         content = _build_action_content(document, added_text, parts)
         photos = {p["id"]: p["bytes"] for p in chat_state.photos}
