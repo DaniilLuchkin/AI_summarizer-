@@ -77,10 +77,12 @@ async def handle_incoming(ctx: AppContext, message: Message, state: FSMContext, 
         await execute.run_typed_custom(ctx, message, bot, ctx.store.lang_for(message))
         return
 
-    # A fresh message after a finalized batch starts a new batch.
+    # A fresh forwarded/media message after a finalized batch replaces it with a
+    # new one (rule 3). Mark it so finalize tells the user the batch was reset.
     if chat_state.has_active_batch:
         ctx.store.start_new_batch(chat_state)
         await state.clear()
+        chat_state.replaced_previous = True
 
     # Refresh the auto-detected language at the start of each new batch
     # (a manual /lang override still wins via get_lang/lang_for).
@@ -129,6 +131,10 @@ async def _finalize(ctx: AppContext, chat_state: ChatState, bot: Bot) -> None:
         return
 
     lang = ctx.store.get_lang(chat_state.chat_id) or "en"
+    # Capture + clear the "replaced a previous batch" flag once, here, so the
+    # notice fires exactly once and never leaks into a later finalize.
+    replaced = chat_state.replaced_previous
+    chat_state.replaced_previous = False
     user_id = pending[0].from_user.id if pending[0].from_user else 0
 
     allowed, reset_in = ctx.limiter.check_batch(user_id)
@@ -193,6 +199,9 @@ async def _finalize(ctx: AppContext, chat_state: ChatState, bot: Bot) -> None:
             chat_state.chat_id, t("upgrade_hint", lang), reply_markup=build_upgrade_keyboard(lang)
         )
 
+    # Prepend a one-time notice when this batch replaced a finalized one.
+    if replaced:
+        await bot.send_message(chat_state.chat_id, t("new_batch_started", lang))
     await bot.send_message(
         chat_state.chat_id, t("batch_ready", lang), reply_markup=build_actions_keyboard(lang)
     )

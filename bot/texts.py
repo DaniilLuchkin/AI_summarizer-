@@ -64,8 +64,12 @@ TEXTS: dict[str, dict[str, str]] = {
             "Дальше выберите действие на клавиатуре или просто напишите свой запрос. "
             "К любому действию можно добавить контекст (текст, файл или ссылку) или нажать "
             "«▶️ Запустить» без него. Для презентации можно приложить свой шаблон .pptx/.potx.\n"
-            "Файлы — до 20 МБ, длинное аудио делю автоматически, длинный ответ присылаю "
-            "файлом. Ответ — на языке исходных сообщений.\n\n"
+            "Файлы — до 20 МБ, длинное аудио делю автоматически, длинный ответ разбиваю "
+            "на несколько сообщений. Ответ — на языке исходных сообщений.\n"
+            "Как работают пачки: пересланные или отправленные сообщения собираются в одну "
+            "пачку; выберите действие или напишите запрос — он применится к ней. Пересылка "
+            "новых сообщений после ответа начинает новую пачку (старая очищается); "
+            "/reset очищает её вручную.\n\n"
             "Команды\n"
             "• Основные: /start, /reset, /help, /lang\n"
             "• Тариф и лимиты: /plans, /pro, /usage\n"
@@ -79,6 +83,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "finalizing": "🛠 Обрабатываю пачку (расшифровка, распознавание)…",
         "empty_batch": "Пачка пустая — нечего обрабатывать.",
         "batch_ready": "✅ Пачка готова. Выберите действие — или просто напишите свой запрос.",
+        "new_batch_started": "🔄 Начал новую пачку — предыдущая очищена.",
         "batch_limit_reached": (
             "⚠️ Достигнут лимит в {limit} сообщений на пачку. "
             "Лишние сообщения проигнорированы."
@@ -304,8 +309,11 @@ TEXTS: dict[str, dict[str, str]] = {
             "Then pick an action on the keyboard or just type your prompt. You can add "
             "context (text, a file, or a link) to any action, or tap “▶️ Run” without it. "
             "For a presentation you can attach your own .pptx/.potx template.\n"
-            "Files up to 20 MB, long audio is split automatically, long answers arrive as "
-            "a file. The answer is in the language of your messages.\n\n"
+            "Files up to 20 MB, long audio is split automatically, long answers are split "
+            "into several messages. The answer is in the language of your messages.\n"
+            "How batches work: forwarded or sent messages collect into one batch; pick an "
+            "action or type a prompt to run it on that batch. Forwarding new messages after "
+            "an answer starts a fresh batch (the old one is cleared); /reset clears it.\n\n"
             "Commands\n"
             "• Everyday: /start, /reset, /help, /lang\n"
             "• Plan & limits: /plans, /pro, /usage\n"
@@ -319,6 +327,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "finalizing": "🛠 Processing the batch (transcription, OCR)…",
         "empty_batch": "The batch is empty — nothing to process.",
         "batch_ready": "✅ Batch ready. Pick an action — or just type your prompt.",
+        "new_batch_started": "🔄 Started a new batch — the previous one was cleared.",
         "batch_limit_reached": (
             "⚠️ Reached the limit of {limit} messages per batch. Extra messages ignored."
         ),
@@ -540,8 +549,12 @@ TEXTS: dict[str, dict[str, str]] = {
             "Далі оберіть дію на клавіатурі або просто напишіть свій запит. До будь-якої "
             "дії можна додати контекст (текст, файл або посилання) чи натиснути "
             "«▶️ Запустити» без нього. Для презентації можна додати свій шаблон .pptx/.potx.\n"
-            "Файли — до 20 МБ, довге аудіо ділю автоматично, довгу відповідь надсилаю "
-            "файлом. Відповідь — мовою вихідних повідомлень.\n\n"
+            "Файли — до 20 МБ, довге аудіо ділю автоматично, довгу відповідь розбиваю "
+            "на кілька повідомлень. Відповідь — мовою вихідних повідомлень.\n"
+            "Як працюють пачки: переслані або надіслані повідомлення збираються в одну "
+            "пачку; оберіть дію або напишіть запит — він застосується до неї. Пересилання "
+            "нових повідомлень після відповіді починає нову пачку (стара очищається); "
+            "/reset очищає її вручну.\n\n"
             "Команди\n"
             "• Основні: /start, /reset, /help, /lang\n"
             "• Тариф і ліміти: /plans, /pro, /usage\n"
@@ -555,6 +568,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "finalizing": "🛠 Обробляю пачку (розшифрування, розпізнавання)…",
         "empty_batch": "Пачка порожня — немає що обробляти.",
         "batch_ready": "✅ Пачка готова. Оберіть дію — або просто напишіть свій запит.",
+        "new_batch_started": "🔄 Почав нову пачку — попередню очищено.",
         "batch_limit_reached": (
             "⚠️ Досягнуто ліміту в {limit} повідомлень на пачку. "
             "Зайві повідомлення проігноровано."
