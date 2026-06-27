@@ -201,7 +201,7 @@ def build_router(ctx: AppContext) -> Router:
             ]
         )
         await callback.message.answer(t("pro_benefits", lang).format(
-            stars=s.pro_price_stars, usdt=s.pro_price_usdt), reply_markup=keyboard)
+            stars=s.pro_price_stars, usdt=fmt_usdt(s.pro_price_usdt)), reply_markup=keyboard)
 
     @router.callback_query(F.data.startswith("cpay:"))
     async def crypto_check(callback: CallbackQuery, bot: Bot) -> None:

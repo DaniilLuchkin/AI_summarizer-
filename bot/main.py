@@ -69,7 +69,7 @@ async def _run() -> None:
     ctx = AppContext(
         settings=settings,
         store=BatchStore(settings.max_batch_messages, settings.max_context_chars),
-        limiter=RateLimiter(settings.max_batches_per_hour, settings.max_llm_calls_per_day),
+        limiter=RateLimiter(settings.max_batches_per_hour),
         orclient=orclient,
         db=db,
         quota=quota,

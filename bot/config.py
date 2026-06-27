@@ -47,7 +47,6 @@ class Settings(BaseSettings):
 
     # --- Guardrails -------------------------------------------------------
     max_batches_per_hour: int = 10
-    max_llm_calls_per_day: int = 50
     # Comma-separated Telegram user ids. Empty string == public (allow everyone).
     allowed_user_ids: str = ""
 

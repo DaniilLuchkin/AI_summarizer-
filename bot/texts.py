@@ -106,16 +106,10 @@ TEXTS: dict[str, dict[str, str]] = {
             "✍️ Напишите свою инструкцию (например: «составь ответ» или «сделай "
             "из этого промпт для другой нейросети»)."
         ),
-        "custom_prompt_empty": "Не вижу инструкции. Напишите, что нужно сделать с пачкой.",
-        "custom_add_context_q": "Добавить контекст к запросу (файл или ссылку)?",
-        "btn_attach": "📎 Прикрепить файл / ссылку",
-        "btn_send": "▶️ Отправить",
-        "custom_send_context": "Пришлите файл (.pdf/.docx/.txt/.md) или сообщение со ссылкой.",
         "context_added_file": "📎 Контекст из файла «{name}» добавлен.",
         "context_added_link": "🔗 Контекст по ссылке добавлен.",
         "context_file_failed": "⚠️ Не удалось прочитать файл «{name}»: {error}",
         "context_link_failed": "⚠️ Не удалось загрузить ссылку {url}: {error}",
-        "context_none_found": "Не нашёл ни файла, ни ссылки — выполняю запрос без контекста.",
         "followup_hint": "Можно выбрать ещё одно действие для этой же пачки 👇",
         "long_result_heads_up": "📄 Ответ длинный — прислал его файлом.",
         "not_allowed": "⛔ Извините, у вас нет доступа к этому боту.",
@@ -123,10 +117,6 @@ TEXTS: dict[str, dict[str, str]] = {
         "generic_error": "😕 Что-то пошло не так. Попробуйте ещё раз.",
         "rate_limit_batches": (
             "🚦 Лимит пачек исчерпан ({limit} в час). Попробуйте через ~{minutes} мин."
-        ),
-        "rate_limit_llm": (
-            "🚦 Лимит запросов к модели исчерпан ({limit} в сутки). "
-            "Попробуйте через ~{hours} ч."
         ),
         "building_presentation": "📊 Собираю презентацию…",
         "deck_polishing": "✨ Полирую презентацию…",
@@ -253,7 +243,6 @@ TEXTS: dict[str, dict[str, str]] = {
         "group_admins_only": "Очистить буфер могут только администраторы группы.",
         "group_cleared": "🧹 Буфер очищен.",
         "group_ask_usage": "Использование: /ask <ваш вопрос по недавнему треду>",
-        "group_media_skipped": "(+{n} медиа не учтено)",
         # --- Per-task model selection (BYO) ---
         "models_byo_only": (
             "🔧 Выбор модели для каждой задачи — функция для тех, кто использует свой "
@@ -353,16 +342,10 @@ TEXTS: dict[str, dict[str, str]] = {
             "✍️ Type your instruction (e.g. “draft a reply” or “turn this into a "
             "prompt for another LLM”)."
         ),
-        "custom_prompt_empty": "I don't see an instruction. Tell me what to do with the batch.",
-        "custom_add_context_q": "Add context to your prompt (a file or a link)?",
-        "btn_attach": "📎 Attach file / link",
-        "btn_send": "▶️ Send",
-        "custom_send_context": "Send a file (.pdf/.docx/.txt/.md) or a message with a link.",
         "context_added_file": "📎 Context from file “{name}” added.",
         "context_added_link": "🔗 Context from the link added.",
         "context_file_failed": "⚠️ Couldn't read file “{name}”: {error}",
         "context_link_failed": "⚠️ Couldn't fetch link {url}: {error}",
-        "context_none_found": "No file or link found — running the prompt without context.",
         "followup_hint": "You can run another action on the same batch 👇",
         "long_result_heads_up": "📄 The answer is long — sent it as a file.",
         "not_allowed": "⛔ Sorry, you don't have access to this bot.",
@@ -370,9 +353,6 @@ TEXTS: dict[str, dict[str, str]] = {
         "generic_error": "😕 Something went wrong. Please try again.",
         "rate_limit_batches": (
             "🚦 Batch limit reached ({limit}/hour). Try again in ~{minutes} min."
-        ),
-        "rate_limit_llm": (
-            "🚦 Model request limit reached ({limit}/day). Try again in ~{hours} h."
         ),
         "building_presentation": "📊 Building the presentation…",
         "deck_polishing": "✨ Polishing your deck…",
@@ -497,7 +477,6 @@ TEXTS: dict[str, dict[str, str]] = {
         "group_admins_only": "Only group admins can clear my buffer.",
         "group_cleared": "🧹 Buffer cleared.",
         "group_ask_usage": "Usage: /ask <your question about the recent thread>",
-        "group_media_skipped": "(+{n} media not included)",
         # --- Per-task model selection (BYO) ---
         "models_byo_only": (
             "🔧 Per-task model selection is a power-user feature for bring-your-own-key "
@@ -599,16 +578,10 @@ TEXTS: dict[str, dict[str, str]] = {
             "✍️ Напишіть свою інструкцію (наприклад: «склади відповідь» або «зроби "
             "з цього промпт для іншої нейромережі»)."
         ),
-        "custom_prompt_empty": "Не бачу інструкції. Напишіть, що зробити з пачкою.",
-        "custom_add_context_q": "Додати контекст до запиту (файл або посилання)?",
-        "btn_attach": "📎 Прикріпити файл / посилання",
-        "btn_send": "▶️ Надіслати",
-        "custom_send_context": "Надішліть файл (.pdf/.docx/.txt/.md) або повідомлення з посиланням.",
         "context_added_file": "📎 Контекст із файлу «{name}» додано.",
         "context_added_link": "🔗 Контекст за посиланням додано.",
         "context_file_failed": "⚠️ Не вдалося прочитати файл «{name}»: {error}",
         "context_link_failed": "⚠️ Не вдалося завантажити посилання {url}: {error}",
-        "context_none_found": "Не знайшов ні файлу, ні посилання — виконую запит без контексту.",
         "followup_hint": "Можна обрати ще одну дію для цієї ж пачки 👇",
         "long_result_heads_up": "📄 Відповідь довга — надіслав її файлом.",
         "not_allowed": "⛔ Вибачте, у вас немає доступу до цього бота.",
@@ -616,10 +589,6 @@ TEXTS: dict[str, dict[str, str]] = {
         "generic_error": "😕 Щось пішло не так. Спробуйте ще раз.",
         "rate_limit_batches": (
             "🚦 Ліміт пачок вичерпано ({limit} на годину). Спробуйте за ~{minutes} хв."
-        ),
-        "rate_limit_llm": (
-            "🚦 Ліміт запитів до моделі вичерпано ({limit} на добу). "
-            "Спробуйте за ~{hours} год."
         ),
         "building_presentation": "📊 Збираю презентацію…",
         "deck_polishing": "✨ Полірую презентацію…",
@@ -745,7 +714,6 @@ TEXTS: dict[str, dict[str, str]] = {
         "group_admins_only": "Очистити буфер можуть лише адміністратори групи.",
         "group_cleared": "🧹 Буфер очищено.",
         "group_ask_usage": "Використання: /ask <ваше питання щодо нещодавнього треду>",
-        "group_media_skipped": "(+{n} медіа не враховано)",
         # --- Per-task model selection (BYO) ---
         "models_byo_only": (
             "🔧 Вибір моделі для кожної задачі — функція для тих, хто використовує "

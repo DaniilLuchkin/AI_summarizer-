@@ -122,19 +122,6 @@ DECK_QA_SYSTEM = (
     "list. Do not invent defects."
 )
 
-PRESENTATION_SYSTEM = (
-    "You design slide decks. Read the combined batch and return a presentation "
-    "as JSON ONLY — no markdown fences, no preamble, no trailing text. Shape:\n"
-    '{"title": "Presentation title", "slides": [{"title": "Slide title", '
-    '"bullets": ["point 1", "point 2"], "image_ref": 1}]}\n'
-    'Produce 5–10 slides capturing the key ideas. "image_ref" is OPTIONAL: set it '
-    "to the id of an available photo (the numbers tagged '[photo #N]' in the "
-    "context, also listed under 'AVAILABLE PHOTOS') when an image strengthens that "
-    "slide — and especially when the user's instruction asks to include the photos. "
-    "Use null (or omit it) when no photo fits. Don't reuse the same photo on many "
-    "slides unless it genuinely fits. " + NAME_INSTRUCTION + SOURCE_LANG_INSTRUCTION
-)
-
 # PDF: structured plain-text document parsed line-by-line by pdf_builder.
 PDF_SYSTEM = (
     "You produce a clean, structured document as plain UTF-8 text. Use '# ' for "

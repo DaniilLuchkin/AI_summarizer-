@@ -287,6 +287,7 @@ async def _make_presentation(
         await message.answer(t("presentation_failed", lang))
     finally:
         await _safe_delete(status)
+    await _resend_keyboard(message, lang)
 
 
 def _append_photo_gallery(plan: dict, photos: dict, want_gallery: bool, title: str) -> None:
@@ -319,7 +320,6 @@ async def _polish_deck(ctx, plan, photos, api_key, user_id, deck_bytes):
         deck_bytes=deck_bytes, rebuild=rebuild, detect_slide=detect_slide,
         max_passes=s.deck_qa_max_passes, max_slides=s.deck_qa_max_slides,
     )
-    await _resend_keyboard(message, lang)
 
 
 async def _make_pdf(message, ctx, lang, content, model, api_key):
