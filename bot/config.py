@@ -80,11 +80,13 @@ class Settings(BaseSettings):
     feature_image: bool = False
 
     # --- Billing (Telegram Stars only; 1 ⭐ = 1 credit) -------------------
-    pro_price_stars: int = 250          # Stars / month subscription
+    # NOTE: test pricing — Pro = 1 ⭐ and a 1-credit pack. Raise PRO_PRICE_STARS
+    # and drop the "1" from CREDIT_PACKS before a real launch.
+    pro_price_stars: int = 1            # Stars / month subscription (TEST)
     pro_period_days: int = 30
     pro_monthly_credits: int = 500      # credits granted each Pro cycle
     pro_credit_discount: float = 0.30   # Pro discount on extra-credit packs
-    credit_packs: str = "100,500,1000"  # buyable pack sizes (credits = Stars)
+    credit_packs: str = "1,100,500,1000"  # buyable pack sizes (credits = Stars)
     max_pro_purchases_per_day: int = 3
     admin_user_id: int = 0
 

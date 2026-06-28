@@ -109,14 +109,21 @@ def build_router(ctx) -> Router:
         await ctx.quota.ensure_user(callback.from_user.id)
         await show_purchase_options(callback.message, _lang(callback.message))
 
-    # --- Buy credits (packs) --------------------------------------------
+    # --- Buy credits (packs) — shared by /buy and the paywall button -----
+    async def show_packs(message: Message, uid: int, lang: str) -> None:
+        await ctx.quota.ensure_user(uid)
+        kb = await _credit_packs_kb(uid, lang)
+        await message.answer(t("buy_header", lang), reply_markup=kb)
+
+    @router.message(Command("buy"))
+    async def cmd_buy(message: Message, state: FSMContext) -> None:
+        await state.clear()
+        await show_packs(message, message.from_user.id, _lang(message))
+
     @router.callback_query(F.data == BUY_CB)
     async def on_buy(callback: CallbackQuery) -> None:
         await callback.answer()
-        lang = _lang(callback.message)
-        await ctx.quota.ensure_user(callback.from_user.id)
-        kb = await _credit_packs_kb(callback.from_user.id, lang)
-        await callback.message.answer(t("buy_credits_header", lang), reply_markup=kb)
+        await show_packs(callback.message, callback.from_user.id, _lang(callback.message))
 
     @router.callback_query(F.data.startswith("pack:"))
     async def buy_pack(callback: CallbackQuery, bot: Bot) -> None:

@@ -69,6 +69,42 @@ def build_router(ctx: AppContext) -> Router:
         await ctx.db.set_byo_key(message.from_user.id, None)
         await message.answer(t("key_removed", _lang(message)))
 
+    # --- /source: switch between own key and the credit plan -------------
+    def _source_kb(lang: str, byo_active: bool) -> InlineKeyboardMarkup:
+        key = ("✅ " if byo_active else "") + t("btn_use_key", lang)
+        cred = ("✅ " if not byo_active else "") + t("btn_use_credits", lang)
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=key, callback_data="src:key")],
+            [InlineKeyboardButton(text=cred, callback_data="src:credits")],
+        ])
+
+    @router.message(Command("source"))
+    async def cmd_source(message: Message) -> None:
+        lang = _lang(message)
+        user = await ctx.quota.ensure_user(message.from_user.id)
+        if not ctx.quota.key_stored(user):
+            await message.answer(t("source_no_key", lang))
+            return
+        await message.answer(t("source_header", lang),
+                             reply_markup=_source_kb(lang, ctx.quota.has_byo(user)))
+
+    @router.callback_query(F.data.in_({"src:key", "src:credits"}))
+    async def on_source(callback: CallbackQuery) -> None:
+        await callback.answer()
+        lang = _lang(callback.message)
+        uid = callback.from_user.id
+        user = await ctx.quota.ensure_user(uid)
+        if not ctx.quota.key_stored(user):
+            await callback.message.edit_text(t("source_no_key", lang))
+            return
+        want_key = callback.data == "src:key"
+        await ctx.db.set_byo_active(uid, want_key)
+        msg = t("source_set_key" if want_key else "source_set_credits", lang)
+        try:
+            await callback.message.edit_text(msg, reply_markup=_source_kb(lang, want_key))
+        except Exception:  # noqa: BLE001 - unchanged/too old
+            await callback.message.answer(msg)
+
     # --- Usage / privacy / invite ---------------------------------------
     @router.message(Command("usage"))
     async def cmd_usage(message: Message, bot: Bot) -> None:
@@ -79,7 +115,9 @@ def build_router(ctx: AppContext) -> Router:
         pro, byo = ctx.quota.is_pro(user), ctx.quota.has_byo(user)
         invite = await _invite_link(bot, user["referral_code"])
 
-        lines = [t("balance_line", lang).format(persistent=fmt(persistent), daily=fmt(daily))]
+        # Active source line (own key vs credits), then the credit balance.
+        lines = [t("usage_mode_key" if byo else "usage_mode_credits", lang)]
+        lines.append(t("balance_line", lang).format(persistent=fmt(persistent), daily=fmt(daily)))
         if pro:
             lines.append(t("usage_pro_active", lang).format(
                 date=user["pro_until"].strftime("%Y-%m-%d")))
