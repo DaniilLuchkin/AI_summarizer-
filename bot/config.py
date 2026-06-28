@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     model_text: str
     model_vision: str
     model_transcribe: str
-    model_image: str
+    model_image: str = ""  # image generation disabled by default (FEATURE_IMAGE)
 
     # Attribution headers OpenRouter uses to identify the calling app.
     openrouter_app_title: str = "Telegram LLM Bot"
@@ -47,7 +47,6 @@ class Settings(BaseSettings):
 
     # --- Guardrails -------------------------------------------------------
     max_batches_per_hour: int = 10
-    max_llm_calls_per_day: int = 50
     # Comma-separated Telegram user ids. Empty string == public (allow everyone).
     allowed_user_ids: str = ""
 
@@ -75,32 +74,38 @@ class Settings(BaseSettings):
     deck_qa_max_passes: int = 1   # detect->fix cycles (hard-capped at 2)
     deck_qa_max_slides: int = 15  # cap slides inspected by the vision QA
 
-    # --- Billing ----------------------------------------------------------
-    crypto_pay_api_token: str = ""  # empty -> hide crypto rail
-    pro_price_stars: int = 250
-    pro_price_usdt: float = 4.0
+    # --- Feature flags (disabled features keep their builder code, unwired) ---
+    feature_pptx: bool = False
+    feature_pdf: bool = False
+    feature_image: bool = False
+
+    # --- Billing (Telegram Stars only; 1 ⭐ = 1 credit) -------------------
+    pro_price_stars: int = 250          # Stars / month subscription
     pro_period_days: int = 30
+    pro_monthly_credits: int = 500      # credits granted each Pro cycle
+    pro_credit_discount: float = 0.30   # Pro discount on extra-credit packs
+    credit_packs: str = "100,500,1000"  # buyable pack sizes (credits = Stars)
     max_pro_purchases_per_day: int = 3
     admin_user_id: int = 0
 
-    # --- Free tier quotas -------------------------------------------------
-    free_signup_audio_sec: int = 600
-    free_signup_photos: int = 5
-    free_daily_audio_sec: int = 300
-    free_daily_photos: int = 5
-    free_daily_llm_calls: int = 30
-    free_saved_prompts: int = 3
+    # --- Credits (env in credits; stored/charged internally in tenths) ----
+    text_tokens_per_credit: int = 20000  # ~1 credit per 20k input+output tokens
+    credits_audio_per_min: float = 1.0   # 1 credit / minute of audio
+    credits_photo: float = 0.5           # per analyzed photo
+    credits_image: float = 0.5           # defined for when image gen is re-enabled
+    signup_bonus_credits: int = 60       # one-time, to persistent, on first /start
+    daily_free_credits: int = 12         # daily floor (non-Pro); 0 disables it
+    referral_bonus_credits: int = 50     # both parties, one-time
+    free_saved_prompts: int = 3          # saved-prompt cap for non-Pro/BYO
 
-    # --- Pro tier quotas --------------------------------------------------
-    pro_daily_audio_sec: int = 7200
-    pro_daily_photos: int = 200
-    pro_daily_llm_calls: int = 500
-    pro_daily_images: int = 50
-    pro_daily_pptx: int = 50
-
-    # --- Referrals --------------------------------------------------------
-    referral_bonus_audio_sec: int = 300
-    referral_bonus_photos: int = 5
+    @cached_property
+    def credit_pack_sizes(self) -> list[int]:
+        out: list[int] = []
+        for chunk in self.credit_packs.split(","):
+            chunk = chunk.strip()
+            if chunk.isdigit() and int(chunk) > 0:
+                out.append(int(chunk))
+        return out or [100, 500, 1000]
 
     # --- Group mode (in-memory thread buffer) ----------------------------
     group_buffer_max: int = 300          # messages kept per group chat
@@ -116,9 +121,6 @@ class Settings(BaseSettings):
     streaming_enabled: bool = True
     # Minimum gap (ms) between live draft/edit updates while streaming.
     stream_throttle_ms: int = 1000
-    # Answers longer than this (chars) are sent as result.md instead of a long
-    # chain of chat messages. Applies to everyone.
-    long_answer_chars: int = 3500
 
     # --- Logging ----------------------------------------------------------
     log_level: str = "INFO"

@@ -7,11 +7,13 @@ are language-agnostic (the model replies in the language of the source text).
 
 from __future__ import annotations
 
-# Order of buttons on the inline keyboard.
+# All text actions (used for routing/quota in execute.py — order-independent).
 TEXT_ACTION_KEYS = ["summary", "structure", "reply", "email", "items", "translate"]
-SPECIAL_ACTION_KEYS = ["presentation", "pdf", "image"]
 CUSTOM_KEY = "custom"
-KEYBOARD_ORDER = TEXT_ACTION_KEYS + SPECIAL_ACTION_KEYS + [CUSTOM_KEY]
+
+# Inline-keyboard layout: the text actions shown in the action grid. PDF /
+# presentation / image are feature-flagged off, so the grid is text-only.
+PRIMARY_ACTION_KEYS = ["summary", "structure", "reply", "email", "items", "translate"]
 
 
 def label_key(action_key: str) -> str:
@@ -32,10 +34,19 @@ SOURCE_LANG_INSTRUCTION = (
     "instruction explicitly requests a different language. "
 )
 
+# Plain-text rule: answers go straight into a chat, so no Markdown by default.
+PLAIN_TEXT_INSTRUCTION = (
+    "Write in plain prose. Do NOT use any Markdown: no '#' headings, no '*'/'_' "
+    "for bold or italic, no backticks or code fences, no '-'/'*' bullet markers, "
+    "no tables. Separate paragraphs with a blank line; if a list is unavoidable, "
+    "put each item on its own line, optionally starting with '• '. "
+)
+
 # Shared tail for predefined text actions.
 _COMMON = (
     NAME_INSTRUCTION
     + SOURCE_LANG_INSTRUCTION
+    + PLAIN_TEXT_INSTRUCTION
     + "Rely only on the provided text and do not invent facts."
 )
 
@@ -66,9 +77,9 @@ SYSTEM_PROMPTS: dict[str, str] = {
     ),
     "translate": (
         "You are a professional translator. Translate the entire combined text "
-        "into English, preserving meaning, tone and formatting. If there are "
-        "service labels like '[1] Name (...)', translate only the content part. "
-        + NAME_INSTRUCTION + SOURCE_LANG_INSTRUCTION
+        "into English, preserving meaning and tone. If there are service labels "
+        "like '[1] Name (...)', translate only the content part. "
+        + NAME_INSTRUCTION + SOURCE_LANG_INSTRUCTION + PLAIN_TEXT_INSTRUCTION
     ),
 }
 
@@ -122,19 +133,6 @@ DECK_QA_SYSTEM = (
     "list. Do not invent defects."
 )
 
-PRESENTATION_SYSTEM = (
-    "You design slide decks. Read the combined batch and return a presentation "
-    "as JSON ONLY — no markdown fences, no preamble, no trailing text. Shape:\n"
-    '{"title": "Presentation title", "slides": [{"title": "Slide title", '
-    '"bullets": ["point 1", "point 2"], "image_ref": 1}]}\n'
-    'Produce 5–10 slides capturing the key ideas. "image_ref" is OPTIONAL: set it '
-    "to the id of an available photo (the numbers tagged '[photo #N]' in the "
-    "context, also listed under 'AVAILABLE PHOTOS') when an image strengthens that "
-    "slide — and especially when the user's instruction asks to include the photos. "
-    "Use null (or omit it) when no photo fits. Don't reuse the same photo on many "
-    "slides unless it genuinely fits. " + NAME_INSTRUCTION + SOURCE_LANG_INSTRUCTION
-)
-
 # PDF: structured plain-text document parsed line-by-line by pdf_builder.
 PDF_SYSTEM = (
     "You produce a clean, structured document as plain UTF-8 text. Use '# ' for "
@@ -163,7 +161,7 @@ CUSTOM_SYSTEM = (
 _GROUP_COMMON = (
     "You are summarizing a group chat. Respond in the dominant language of the "
     "messages. Attribute points to the named people. Be concise and factual; "
-    "rely only on the provided messages. "
+    "rely only on the provided messages. " + PLAIN_TEXT_INSTRUCTION
 )
 GROUP_SUMMARY_SYSTEM = (
     _GROUP_COMMON

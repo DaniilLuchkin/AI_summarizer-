@@ -35,7 +35,7 @@ def extract_urls(text: str) -> list[str]:
 def _truncate(text: str, max_chars: int) -> str:
     text = text.strip()
     if len(text) > max_chars:
-        return text[:max_chars] + "\n…(контекст обрезан)"
+        return text[:max_chars] + "\n…(context truncated)"
     return text
 
 

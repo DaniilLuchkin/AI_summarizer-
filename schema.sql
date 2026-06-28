@@ -7,23 +7,36 @@ CREATE TABLE IF NOT EXISTS users (
   lang_override    TEXT,
   pro_until        TIMESTAMPTZ,
   byo_key_enc      TEXT,                     -- Fernet-encrypted OpenRouter key
-  bonus_audio_sec  INTEGER NOT NULL,         -- one-time signup pool, consumed first
-  bonus_photos     INTEGER NOT NULL,
+  bonus_audio_sec  INTEGER NOT NULL DEFAULT 0,  -- legacy (pre-credits), unused
+  bonus_photos     INTEGER NOT NULL DEFAULT 0,  -- legacy (pre-credits), unused
   referral_code    TEXT UNIQUE NOT NULL,
   referred_by      BIGINT,
+  -- Credit balances stored as INTEGER TENTHS of a credit (1 credit = 10 units).
+  credits              INTEGER NOT NULL DEFAULT 0,  -- persistent: bonus/referral/buy/Pro
+  daily_credits        INTEGER NOT NULL DEFAULT 0,  -- daily free floor (reset, not added)
+  daily_credits_date   DATE,
+  signup_bonus_granted BOOLEAN NOT NULL DEFAULT FALSE,
   created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS usage_daily (
+-- Migrate existing deployments (idempotent; new columns + relaxed legacy NOTs).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS credits INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_credits INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_credits_date DATE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS signup_bonus_granted BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE users ALTER COLUMN bonus_audio_sec SET DEFAULT 0;
+ALTER TABLE users ALTER COLUMN bonus_photos SET DEFAULT 0;
+
+-- Credit ledger: one row per grant/charge, delta in tenths.
+CREATE TABLE IF NOT EXISTS credit_ledger (
+  id          BIGSERIAL PRIMARY KEY,
   telegram_id BIGINT NOT NULL,
-  day         DATE NOT NULL,
-  audio_sec   INTEGER NOT NULL DEFAULT 0,
-  photos      INTEGER NOT NULL DEFAULT 0,
-  llm_calls   INTEGER NOT NULL DEFAULT 0,
-  images      INTEGER NOT NULL DEFAULT 0,
-  pptx        INTEGER NOT NULL DEFAULT 0,
-  PRIMARY KEY (telegram_id, day)
+  delta       INTEGER NOT NULL,              -- tenths; + grant, - charge
+  bucket      TEXT NOT NULL,                 -- 'persistent' | 'daily'
+  reason      TEXT NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS credit_ledger_uid_idx ON credit_ledger (telegram_id, created_at);
 
 CREATE TABLE IF NOT EXISTS media_cache (        -- saves OpenRouter cost on repeat files
   file_unique_id TEXT PRIMARY KEY,              -- Telegram's stable file_unique_id

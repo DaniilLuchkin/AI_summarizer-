@@ -22,6 +22,16 @@ class OpenRouterError(RuntimeError):
     """Raised when OpenRouter returns an error or an unexpected payload."""
 
 
+def _total_tokens(usage: dict | None) -> int:
+    """Input+output tokens from an OpenRouter `usage` block (0 if absent)."""
+    if not isinstance(usage, dict):
+        return 0
+    total = usage.get("total_tokens")
+    if isinstance(total, int):
+        return total
+    return int(usage.get("prompt_tokens", 0) or 0) + int(usage.get("completion_tokens", 0) or 0)
+
+
 class OpenRouterClient:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
@@ -55,8 +65,20 @@ class OpenRouterClient:
         data = await self._post("/chat/completions", payload, api_key=api_key)
         return self._extract_message(data)
 
-    async def chat_stream(
+    async def chat_tokens(
         self, messages: list[dict], model: str | None = None, api_key: str | None = None
+    ) -> tuple[str, int]:
+        """Like ``chat`` but also returns total (input+output) tokens for billing."""
+        payload = {"model": model or self._settings.model_text, "messages": messages}
+        data = await self._post("/chat/completions", payload, api_key=api_key)
+        return self._extract_message(data), _total_tokens(data.get("usage"))
+
+    async def chat_stream(
+        self,
+        messages: list[dict],
+        model: str | None = None,
+        api_key: str | None = None,
+        usage_out: dict | None = None,
     ) -> AsyncIterator[str]:
         """Streaming chat completion: yields assistant text deltas as they arrive.
 
@@ -68,6 +90,8 @@ class OpenRouterClient:
             "model": model or self._settings.model_text,
             "messages": messages,
             "stream": True,
+            # Ask OpenRouter to include a final usage chunk so we can bill tokens.
+            "stream_options": {"include_usage": True},
         }
         extra = {"Authorization": f"Bearer {api_key}"} if api_key else None
         try:
@@ -93,6 +117,9 @@ class OpenRouterClient:
                         obj = json.loads(data)
                     except json.JSONDecodeError:
                         continue
+                    # The final chunk carries usage (choices may be empty there).
+                    if usage_out is not None and obj.get("usage"):
+                        usage_out["total_tokens"] = _total_tokens(obj["usage"])
                     try:
                         delta = obj["choices"][0]["delta"].get("content")
                     except (KeyError, IndexError, TypeError):

@@ -17,7 +17,7 @@ from aiogram.types import CallbackQuery, Message
 
 from bot.handlers import collect, execute
 from bot.handlers.run import ACTION_CB_PREFIX, RUN_CB, ActionStates, build_run_keyboard
-from bot.prompts import CUSTOM_KEY, label_key
+from bot.prompts import CUSTOM_KEY, PRIMARY_ACTION_KEYS, label_key
 from bot.runtime import AppContext
 from bot.texts import resolve_lang, t
 
@@ -41,6 +41,11 @@ def build_router(ctx: AppContext) -> Router:
             return
         lang = _lang(message, callback.from_user.language_code)
 
+        # Disabled features could still arrive from a stale cached keyboard.
+        if key != CUSTOM_KEY and key not in PRIMARY_ACTION_KEYS:
+            await message.answer(t("feature_unavailable", lang))
+            return
+
         chat_state = ctx.store.get(message.chat.id)
         if chat_state is None or not chat_state.has_active_batch:
             await message.answer(t("no_active_batch", lang))
@@ -55,11 +60,9 @@ def build_router(ctx: AppContext) -> Router:
             return
 
         # Predefined: the bold command IS the echo; then offer context / Run.
-        # Presentation gets a tailored hint (it can take a .pptx/.potx template).
         label = t(label_key(key), lang)
-        hint_key = "presentation_context_hint" if key == "presentation" else "action_context_hint"
         await message.answer(f"<b>{label}</b>", parse_mode="HTML")
-        await message.answer(t(hint_key, lang), reply_markup=build_run_keyboard(lang))
+        await message.answer(t("action_context_hint", lang), reply_markup=build_run_keyboard(lang))
 
     # --- Run staged action with no added context ------------------------
     @router.callback_query(ActionStates.awaiting_input, F.data == RUN_CB)

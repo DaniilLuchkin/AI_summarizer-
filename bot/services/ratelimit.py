@@ -1,10 +1,8 @@
 """In-memory per-user rate limiting (sliding windows).
 
-Two independent limits:
-  * batches per rolling hour
-  * LLM answer calls per rolling day
-
-Counters live in memory only and reset on restart — acceptable per spec.
+One limit: batches per rolling hour (a coarse spam guard on top of the
+DB-backed daily quotas in services/quota.py). Counters live in memory only and
+reset on restart — acceptable per spec.
 """
 
 from __future__ import annotations
@@ -13,15 +11,12 @@ import time
 from collections import defaultdict, deque
 
 _HOUR = 3600
-_DAY = 86400
 
 
 class RateLimiter:
-    def __init__(self, max_batches_per_hour: int, max_llm_calls_per_day: int) -> None:
+    def __init__(self, max_batches_per_hour: int) -> None:
         self._max_batches = max_batches_per_hour
-        self._max_llm = max_llm_calls_per_day
         self._batches: dict[int, deque[float]] = defaultdict(deque)
-        self._llm: dict[int, deque[float]] = defaultdict(deque)
 
     @staticmethod
     def _prune(timestamps: deque[float], window: float, now: float) -> None:
@@ -45,10 +40,3 @@ class RateLimiter:
 
     def record_batch(self, user_id: int) -> None:
         self._batches[user_id].append(time.monotonic())
-
-    # --- LLM calls -------------------------------------------------------
-    def check_llm(self, user_id: int) -> tuple[bool, float]:
-        return self._check(self._llm, user_id, self._max_llm, _DAY)
-
-    def record_llm(self, user_id: int) -> None:
-        self._llm[user_id].append(time.monotonic())

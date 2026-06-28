@@ -27,7 +27,7 @@ from aiogram.types import (
 
 from bot import texts
 from bot.handlers import execute
-from bot.handlers.run import build_actions_keyboard, build_upgrade_keyboard
+from bot.handlers.run import build_actions_keyboard, build_credits_keyboard
 from bot.runtime import AppContext
 from bot.services import media, transcribe, vision
 from bot.services.batch import ChatState
@@ -77,10 +77,12 @@ async def handle_incoming(ctx: AppContext, message: Message, state: FSMContext, 
         await execute.run_typed_custom(ctx, message, bot, ctx.store.lang_for(message))
         return
 
-    # A fresh message after a finalized batch starts a new batch.
+    # A fresh forwarded/media message after a finalized batch replaces it with a
+    # new one (rule 3). Mark it so finalize tells the user the batch was reset.
     if chat_state.has_active_batch:
         ctx.store.start_new_batch(chat_state)
         await state.clear()
+        chat_state.replaced_previous = True
 
     # Refresh the auto-detected language at the start of each new batch
     # (a manual /lang override still wins via get_lang/lang_for).
@@ -129,6 +131,10 @@ async def _finalize(ctx: AppContext, chat_state: ChatState, bot: Bot) -> None:
         return
 
     lang = ctx.store.get_lang(chat_state.chat_id) or "en"
+    # Capture + clear the "replaced a previous batch" flag once, here, so the
+    # notice fires exactly once and never leaks into a later finalize.
+    replaced = chat_state.replaced_previous
+    chat_state.replaced_previous = False
     user_id = pending[0].from_user.id if pending[0].from_user else 0
 
     allowed, reset_in = ctx.limiter.check_batch(user_id)
@@ -145,14 +151,15 @@ async def _finalize(ctx: AppContext, chat_state: ChatState, bot: Bot) -> None:
 
     status = await bot.send_message(chat_state.chat_id, t("finalizing", lang))
 
-    # BYO-key users transcribe/OCR on their own key, model, and bypass quotas.
+    # BYO-key users transcribe/OCR on their own key, model, and are never charged.
     api_key = await ctx.quota.api_key_for(user_id)
+    byo = ctx.quota.has_byo(await ctx.quota.ensure_user(user_id))
     transcribe_model = await ctx.models.resolve(user_id, "transcribe")
     vision_model = await ctx.models.resolve(user_id, "vision")
 
     item_texts: list[str] = []
     notes: list[str] = []
-    limited = False  # True if any item was skipped because a quota was reached
+    limited = False  # True if any item was skipped for lack of credits
     index = 0
     for msg in pending:
         index += 1
@@ -160,8 +167,8 @@ async def _finalize(ctx: AppContext, chat_state: ChatState, bot: Bot) -> None:
         name = _sender_name(msg, lang)
         try:
             text, note, item_limited = await _process_message(
-                ctx, bot, msg, index, name, user_id, api_key, transcribe_model, vision_model,
-                chat_state,
+                ctx, bot, msg, index, name, user_id, api_key, byo, transcribe_model,
+                vision_model, chat_state,
             )
         except FileTooLarge:
             notes.append(t("skipped_too_large", lang).format(index=index, kind=kind))
@@ -186,13 +193,15 @@ async def _finalize(ctx: AppContext, chat_state: ChatState, bot: Bot) -> None:
         await bot.send_message(chat_state.chat_id, t("empty_batch", lang))
         return
 
-    # If any item was skipped due to a daily/quota limit, nudge toward Pro
-    # with a one-tap upgrade button on the hint message.
+    # If any item was skipped for lack of credits, offer Buy credits / Upgrade.
     if limited:
         await bot.send_message(
-            chat_state.chat_id, t("upgrade_hint", lang), reply_markup=build_upgrade_keyboard(lang)
+            chat_state.chat_id, t("credits_low", lang), reply_markup=build_credits_keyboard(lang)
         )
 
+    # Prepend a one-time notice when this batch replaced a finalized one.
+    if replaced:
+        await bot.send_message(chat_state.chat_id, t("new_batch_started", lang))
     await bot.send_message(
         chat_state.chat_id, t("batch_ready", lang), reply_markup=build_actions_keyboard(lang)
     )
@@ -233,12 +242,13 @@ def _kind(msg: Message) -> str:
 
 async def _process_message(
     ctx: AppContext, bot: Bot, msg: Message, index: int, name: str, user_id: int,
-    api_key: str | None, transcribe_model: str, vision_model: str, chat_state: ChatState,
+    api_key: str | None, byo: bool, transcribe_model: str, vision_model: str,
+    chat_state: ChatState,
 ) -> tuple[str | None, str | None, bool]:
     """Convert one message into a labeled context line.
 
     Returns (item_text, optional_note, limited?) where `limited` is True when the
-    item was skipped because the user hit a daily/quota limit.
+    item was skipped for lack of credits.
     """
     caption = (msg.caption or "").strip()
     lang = ctx.store.get_lang(msg.chat.id) or "en"
@@ -246,17 +256,19 @@ async def _process_message(
     if msg.text:
         return _label(index, name, texts.KIND_TEXT, msg.text.strip()), None, False
 
-    # --- Audio-bearing items: probe duration -> consume_audio -> cache/transcribe
+    # --- Audio-bearing items: probe duration -> charge -> cache/transcribe
     if msg.voice or msg.audio or msg.video_note or msg.video:
         return await _process_audio(
-            ctx, bot, msg, index, name, caption, lang, user_id, api_key, transcribe_model
+            ctx, bot, msg, index, name, caption, lang, user_id, api_key, byo, transcribe_model
         )
 
     if msg.photo:
         largest = msg.photo[-1]
-        ok, _ = await ctx.quota.consume_photo(user_id, 1)
-        if not ok:
-            return _label(index, name, texts.KIND_PHOTO, t("item_not_ocr", lang)), None, True
+        # Charge the photo cost up front (BYO bypasses). Skip if out of credits.
+        if not byo:
+            ok, _ = await ctx.credits.charge(user_id, ctx.credits.photo_cost_tenths(), "photo")
+            if not ok:
+                return _label(index, name, texts.KIND_PHOTO, t("item_skipped_no_credits", lang)), None, True
         # Always download the bytes (cheap, no OpenRouter cost) so the photo can
         # be reused on slides; the vision *text* is still cached to avoid re-billing.
         data = await media.download(bot, largest.file_id)
@@ -285,8 +297,8 @@ async def _process_message(
     return None, None, False
 
 
-async def _process_audio(ctx, bot, msg, index, name, caption, lang, user_id, api_key, transcribe_model):
-    """Handle voice/audio/video/video_note: quota by duration, cache, transcribe."""
+async def _process_audio(ctx, bot, msg, index, name, caption, lang, user_id, api_key, byo, transcribe_model):
+    """Handle voice/audio/video/video_note: charge by duration, cache, transcribe."""
     if msg.voice:
         file_id, fuid, fmt, kind, is_video = msg.voice.file_id, msg.voice.file_unique_id, "ogg", texts.KIND_VOICE, False
     elif msg.audio:
@@ -300,9 +312,13 @@ async def _process_audio(ctx, bot, msg, index, name, caption, lang, user_id, api
     data = await media.download(bot, file_id)  # raises FileTooLarge if >20MB
     duration = await media.probe_duration_bytes(data, fmt) or 0
 
-    ok, _ = await ctx.quota.consume_audio(user_id, int(duration))
-    if not ok:
-        return _label(index, name, kind, t("item_not_transcribed", lang)), None, True
+    # Charge by real duration (BYO bypasses). Skip the item if out of credits.
+    if not byo:
+        ok, _ = await ctx.credits.charge(
+            user_id, ctx.credits.audio_cost_tenths(duration), "audio"
+        )
+        if not ok:
+            return _label(index, name, kind, t("item_skipped_no_credits", lang)), None, True
 
     # Cache hit avoids re-billing OpenRouter for the same file.
     cached = await ctx.db.media_cache_get(fuid)

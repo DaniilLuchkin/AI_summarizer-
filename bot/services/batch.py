@@ -35,6 +35,9 @@ class ChatState:
     limit_notified: bool = False
     # Last custom-prompt instruction (for the 💾 Save prompt button).
     last_custom_prompt: str | None = None
+    # True when the current collecting batch replaced a previously finalized one
+    # (drives the one-time "🔄 new batch started" notice at finalize).
+    replaced_previous: bool = False
     # Forwarded photos kept for reuse on slides: [{id, bytes, mime, desc}].
     # Image bytes are in-memory only; capped (see BatchStore.retain_photo).
     photos: list[dict] = field(default_factory=list)
@@ -121,15 +124,22 @@ class BatchStore:
         state.photos = []
         state.dropped = 0
         state.limit_notified = False
+        state.last_custom_prompt = None
+        state.replaced_previous = False
         state.debounce_task = None
 
     def start_new_batch(self, state: ChatState) -> None:
-        """Clear finalized context + pending so a fresh batch can be collected."""
+        """Replace a finalized batch: cancel any pending timer and drop the old
+        context + retained photos so a fresh batch can be collected cleanly."""
+        if state.debounce_task and not state.debounce_task.done():
+            state.debounce_task.cancel()
         state.item_texts = []
         state.pending = []
         state.photos = []
         state.dropped = 0
         state.limit_notified = False
+        state.last_custom_prompt = None
+        state.replaced_previous = False
 
     def assemble_for_llm(self, state: ChatState, max_chars: int | None = None) -> tuple[str, bool]:
         """Join finalized items into one document, truncating oldest if too long.

@@ -7,7 +7,7 @@ import logging
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from bot.prompts import CUSTOM_KEY, KEYBOARD_ORDER, label_key
+from bot.prompts import CUSTOM_KEY, PRIMARY_ACTION_KEYS, label_key
 from bot.runtime import AppContext
 from bot.services.delivery import deliver_answer
 from bot.services.openrouter import OpenRouterError
@@ -19,12 +19,23 @@ logger = logging.getLogger(__name__)
 ACTION_CB_PREFIX = "act:"   # act:<key> — stage a predefined action or custom
 RUN_CB = "run:now"          # run the staged action without added context
 UPGRADE_CB = "upgrade"      # open the Pro purchase options (handled in billing)
+BUY_CB = "buy:open"         # open the Buy-credits packs (handled in billing)
 
 
 def build_upgrade_keyboard(lang: str) -> InlineKeyboardMarkup:
-    """One-tap "⭐ Upgrade to Pro" button, attached to every paywall/limit reply."""
+    """One-tap "⭐ Upgrade to Pro" button, attached to paywall/limit replies."""
     return InlineKeyboardMarkup(
         inline_keyboard=[[InlineKeyboardButton(text=t("btn_upgrade", lang), callback_data=UPGRADE_CB)]]
+    )
+
+
+def build_credits_keyboard(lang: str) -> InlineKeyboardMarkup:
+    """Buy-credits + Upgrade buttons, shown whenever a user is out of credits."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=t("btn_buy_credits", lang), callback_data=BUY_CB)],
+            [InlineKeyboardButton(text=t("btn_upgrade", lang), callback_data=UPGRADE_CB)],
+        ]
     )
 
 
@@ -35,30 +46,22 @@ class ActionStates(StatesGroup):
 
 
 def build_actions_keyboard(lang: str) -> InlineKeyboardMarkup:
-    """Predefined actions in a 2-per-row grid, custom button full-width at bottom."""
+    """The text-action grid (2 per row) + the full-width Custom button."""
     rows: list[list[InlineKeyboardButton]] = []
     row: list[InlineKeyboardButton] = []
-    for key in KEYBOARD_ORDER:
-        if key == CUSTOM_KEY:
-            continue  # custom gets its own full-width bottom row
-        row.append(
-            InlineKeyboardButton(
-                text=t(label_key(key), lang), callback_data=f"{ACTION_CB_PREFIX}{key}"
-            )
-        )
+    for key in PRIMARY_ACTION_KEYS:
+        row.append(InlineKeyboardButton(
+            text=t(label_key(key), lang), callback_data=f"{ACTION_CB_PREFIX}{key}"
+        ))
         if len(row) == 2:
             rows.append(row)
             row = []
     if row:
         rows.append(row)
-    # Bottom-most, full-width "or just type your prompt ⬇️" button.
     rows.append(
-        [
-            InlineKeyboardButton(
-                text=t(label_key(CUSTOM_KEY), lang),
-                callback_data=f"{ACTION_CB_PREFIX}{CUSTOM_KEY}",
-            )
-        ]
+        [InlineKeyboardButton(
+            text=t(label_key(CUSTOM_KEY), lang), callback_data=f"{ACTION_CB_PREFIX}{CUSTOM_KEY}"
+        )]
     )
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -79,14 +82,20 @@ async def run_llm(
     model: str | None = None,
     api_key: str | None = None,
     show_keyboard: bool = True,
+    formatted: bool = False,
+    as_file: bool = False,
+    user_id: int | None = None,
+    charge_text: bool = False,
 ) -> None:
-    """Call the text model and deliver a cleanly rendered (streamed) result.
+    """Call the text model and deliver the (streamed) result as plain text.
 
-    Quota gating happens in execute.run_staged before calling this. `model` /
-    `api_key` support the Pro model and bring-your-own-key.
+    Balance is soft-checked in execute.run_staged before calling this. When
+    `charge_text` is set (non-BYO users), the token-based text cost is charged
+    AFTER a successful response. `formatted` / `as_file` are set only when the
+    user explicitly asked for formatting / a file.
     """
     try:
-        await deliver_answer(
+        tokens = await deliver_answer(
             message,
             ctx,
             lang,
@@ -96,7 +105,12 @@ async def run_llm(
             ],
             model=model,
             api_key=api_key,
+            formatted=formatted,
+            as_file=as_file,
         )
+        if charge_text and user_id is not None and tokens > 0:
+            # Tiny, generous cost; best-effort (already delivered).
+            await ctx.credits.charge(user_id, ctx.credits.text_cost_tenths(tokens), "text")
         if show_keyboard:
             await message.answer(t("followup_hint", lang), reply_markup=build_actions_keyboard(lang))
     except OpenRouterError:

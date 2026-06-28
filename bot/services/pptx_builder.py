@@ -1,6 +1,6 @@
 """Build a .pptx file from the LLM's JSON slide description.
 
-Input shape (produced by PRESENTATION_SYSTEM):
+Input shape (legacy template path; the rich path is planned by DECK_PLAN_SYSTEM):
     {"title": "...", "slides": [{"title": "...", "bullets": [...], "image_ref": 1}]}
 
 `image_ref` (optional) is a photo id from the batch; the matching image bytes are

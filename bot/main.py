@@ -21,6 +21,7 @@ from bot.handlers import models as models_handler
 from bot.middleware import AccessMiddleware
 from bot.runtime import AppContext
 from bot.services.batch import BatchStore
+from bot.services.credits import CreditService
 from bot.services.db import Database
 from bot.services.group_buffer import GroupBuffer
 from bot.services.models import ModelService
@@ -69,10 +70,11 @@ async def _run() -> None:
     ctx = AppContext(
         settings=settings,
         store=BatchStore(settings.max_batch_messages, settings.max_context_chars),
-        limiter=RateLimiter(settings.max_batches_per_hour, settings.max_llm_calls_per_day),
+        limiter=RateLimiter(settings.max_batches_per_hour),
         orclient=orclient,
         db=db,
         quota=quota,
+        credits=CreditService(db, settings),
         group_buffer=GroupBuffer(settings.group_buffer_max, settings.group_buffer_ttl_hours),
         models=ModelService(db, settings, orclient, quota),
     )
