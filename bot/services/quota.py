@@ -77,8 +77,16 @@ class Quota:
         pro_until = user["pro_until"]
         return pro_until is not None and pro_until > _utc_now()
 
-    def has_byo(self, user) -> bool:
+    def key_stored(self, user) -> bool:
+        """A usable BYO key is stored (regardless of the active toggle)."""
         return bool(user["byo_key_enc"]) and self._fernet is not None
+
+    def has_byo(self, user) -> bool:
+        """BYO is the ACTIVE source: a key is stored AND the toggle is on."""
+        return self.key_stored(user) and bool(user.get("byo_active", True))
+
+    async def has_stored_key(self, telegram_id: int) -> bool:
+        return self.key_stored(await self.ensure_user(telegram_id))
 
     @property
     def fernet_available(self) -> bool:

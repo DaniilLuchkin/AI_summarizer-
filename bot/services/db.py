@@ -84,8 +84,21 @@ class Database:
         )
 
     async def set_byo_key(self, telegram_id: int, enc: str | None) -> None:
+        # Saving a key makes it the active source by default; clearing it is a no-op
+        # for byo_active (resolution falls back to credits when no key is stored).
+        if enc is not None:
+            await self.pool.execute(
+                "UPDATE users SET byo_key_enc=$2, byo_active=TRUE WHERE telegram_id=$1",
+                telegram_id, enc,
+            )
+        else:
+            await self.pool.execute(
+                "UPDATE users SET byo_key_enc=NULL WHERE telegram_id=$1", telegram_id
+            )
+
+    async def set_byo_active(self, telegram_id: int, active: bool) -> None:
         await self.pool.execute(
-            "UPDATE users SET byo_key_enc=$2 WHERE telegram_id=$1", telegram_id, enc
+            "UPDATE users SET byo_active=$2 WHERE telegram_id=$1", telegram_id, active
         )
 
     # --- Credits (all amounts in INTEGER tenths of a credit) -------------

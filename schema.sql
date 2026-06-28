@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
   lang_override    TEXT,
   pro_until        TIMESTAMPTZ,
   byo_key_enc      TEXT,                     -- Fernet-encrypted OpenRouter key
+  byo_active       BOOLEAN NOT NULL DEFAULT TRUE,  -- use stored key vs credits
   bonus_audio_sec  INTEGER NOT NULL DEFAULT 0,  -- legacy (pre-credits), unused
   bonus_photos     INTEGER NOT NULL DEFAULT 0,  -- legacy (pre-credits), unused
   referral_code    TEXT UNIQUE NOT NULL,
@@ -24,6 +25,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS credits INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_credits INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_credits_date DATE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS signup_bonus_granted BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS byo_active BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE users ALTER COLUMN bonus_audio_sec SET DEFAULT 0;
 ALTER TABLE users ALTER COLUMN bonus_photos SET DEFAULT 0;
 

@@ -72,8 +72,8 @@ TEXTS: dict[str, dict[str, str]] = {
             "/reset очищает её вручную.\n\n"
             "Команды\n"
             "• Основные: /start, /reset, /help, /lang\n"
-            "• Тариф и лимиты: /plans, /pro, /usage\n"
-            "• Свой ключ и модели: /setkey, /removekey, /models\n"
+            "• Тариф и кредиты: /plans, /pro, /buy, /usage\n"
+            "• Свой ключ и модели: /setkey, /removekey, /source, /models\n"
             "• Запросы: /prompts (сохранённые)\n"
             "• Друзья и данные: /invite, /privacy, /forgetme\n"
             "• В группах: /summary, /ask, /actions, /clear"
@@ -202,7 +202,16 @@ TEXTS: dict[str, dict[str, str]] = {
         "item_skipped_no_credits": "пропущено: нет кредитов",
         "feature_unavailable": "Эта функция сейчас недоступна.",
         "btn_buy_credits": "💳 Купить кредиты",
-        "buy_credits_header": "Выберите пакет кредитов (1 ⭐ = 1 кредит):",
+        "buy_header": "Выберите пакет кредитов (1 ⭐ = 1 кредит):",
+        # --- Source toggle (own key vs credits) ---
+        "source_header": "Откуда брать ресурсы для запросов?",
+        "btn_use_key": "🔑 Использовать мой ключ",
+        "btn_use_credits": "💳 Использовать кредиты",
+        "source_set_key": "🔑 Готово — используется ваш ключ. Кредиты не списываются.",
+        "source_set_credits": "💳 Готово — используются кредиты.",
+        "source_no_key": "Сейчас используются кредиты. Чтобы добавить свой ключ: /setkey",
+        "usage_mode_key": "Режим: 🔑 свой ключ — кредиты не списываются.",
+        "usage_mode_credits": "Режим: 💳 кредиты.",
         "pack_label": "{credits} кредитов — {stars} ⭐",
         "pack_invoice_title": "{credits} кредитов",
         "pack_invoice_desc": "Пополнение на {credits} кредитов Forwardly.",
@@ -298,8 +307,8 @@ TEXTS: dict[str, dict[str, str]] = {
             "an answer starts a fresh batch (the old one is cleared); /reset clears it.\n\n"
             "Commands\n"
             "• Everyday: /start, /reset, /help, /lang\n"
-            "• Plan & limits: /plans, /pro, /usage\n"
-            "• Your key & models: /setkey, /removekey, /models\n"
+            "• Plan & credits: /plans, /pro, /buy, /usage\n"
+            "• Your key & models: /setkey, /removekey, /source, /models\n"
             "• Prompts: /prompts (saved)\n"
             "• Friends & data: /invite, /privacy, /forgetme\n"
             "• In groups: /summary, /ask, /actions, /clear"
@@ -425,7 +434,16 @@ TEXTS: dict[str, dict[str, str]] = {
         "item_skipped_no_credits": "skipped: out of credits",
         "feature_unavailable": "That feature is currently unavailable.",
         "btn_buy_credits": "💳 Buy credits",
-        "buy_credits_header": "Choose a credit pack (1 ⭐ = 1 credit):",
+        "buy_header": "Choose a credit pack (1 ⭐ = 1 credit):",
+        # --- Source toggle (own key vs credits) ---
+        "source_header": "Which source should your requests use?",
+        "btn_use_key": "🔑 Use my key",
+        "btn_use_credits": "💳 Use credits",
+        "source_set_key": "🔑 Done — using your key. Credits won't be spent.",
+        "source_set_credits": "💳 Done — using credits.",
+        "source_no_key": "You're on credits. To add your own key: /setkey",
+        "usage_mode_key": "Mode: 🔑 own key — credits aren't being spent.",
+        "usage_mode_credits": "Mode: 💳 credits.",
         "pack_label": "{credits} credits — {stars} ⭐",
         "pack_invoice_title": "{credits} credits",
         "pack_invoice_desc": "Top up {credits} Forwardly credits.",
@@ -522,8 +540,8 @@ TEXTS: dict[str, dict[str, str]] = {
             "/reset очищає її вручну.\n\n"
             "Команди\n"
             "• Основні: /start, /reset, /help, /lang\n"
-            "• Тариф і ліміти: /plans, /pro, /usage\n"
-            "• Свій ключ і моделі: /setkey, /removekey, /models\n"
+            "• Тариф і кредити: /plans, /pro, /buy, /usage\n"
+            "• Свій ключ і моделі: /setkey, /removekey, /source, /models\n"
             "• Запити: /prompts (збережені)\n"
             "• Друзі та дані: /invite, /privacy, /forgetme\n"
             "• У групах: /summary, /ask, /actions, /clear"
@@ -651,7 +669,16 @@ TEXTS: dict[str, dict[str, str]] = {
         "item_skipped_no_credits": "пропущено: немає кредитів",
         "feature_unavailable": "Ця функція зараз недоступна.",
         "btn_buy_credits": "💳 Купити кредити",
-        "buy_credits_header": "Оберіть пакет кредитів (1 ⭐ = 1 кредит):",
+        "buy_header": "Оберіть пакет кредитів (1 ⭐ = 1 кредит):",
+        # --- Source toggle (own key vs credits) ---
+        "source_header": "Звідки брати ресурси для запитів?",
+        "btn_use_key": "🔑 Використовувати мій ключ",
+        "btn_use_credits": "💳 Використовувати кредити",
+        "source_set_key": "🔑 Готово — використовується ваш ключ. Кредити не списуються.",
+        "source_set_credits": "💳 Готово — використовуються кредити.",
+        "source_no_key": "Зараз використовуються кредити. Щоб додати свій ключ: /setkey",
+        "usage_mode_key": "Режим: 🔑 власний ключ — кредити не списуються.",
+        "usage_mode_credits": "Режим: 💳 кредити.",
         "pack_label": "{credits} кредитів — {stars} ⭐",
         "pack_invoice_title": "{credits} кредитів",
         "pack_invoice_desc": "Поповнення на {credits} кредитів Forwardly.",
