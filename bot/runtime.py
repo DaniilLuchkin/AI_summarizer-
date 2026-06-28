@@ -9,6 +9,7 @@ from dataclasses import dataclass
 
 from bot.config import Settings
 from bot.services.batch import BatchStore
+from bot.services.credits import CreditService
 from bot.services.db import Database
 from bot.services.group_buffer import GroupBuffer
 from bot.services.models import ModelService
@@ -25,5 +26,6 @@ class AppContext:
     orclient: OpenRouterClient
     db: Database
     quota: Quota
+    credits: CreditService
     group_buffer: GroupBuffer
     models: ModelService

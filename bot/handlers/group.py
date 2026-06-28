@@ -18,6 +18,7 @@ from aiogram import Bot, F, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import ChatMemberUpdated, Message
 
+from bot.handlers.run import build_credits_keyboard
 from bot.prompts import GROUP_ACTIONS_SYSTEM, GROUP_ASK_SYSTEM, GROUP_SUMMARY_SYSTEM
 from bot.runtime import AppContext
 from bot.services.delivery import deliver_answer
@@ -51,10 +52,11 @@ def build_router(ctx: AppContext) -> Router:
     async def _run_llm(message: Message, invoker_id: int, lang: str, system: str, content: str):
         """Call the text model with the invoker's BYO key / Pro model and post it."""
         api_key = await ctx.quota.api_key_for(invoker_id)
+        byo = api_key is not None
         model = await ctx.models.resolve(invoker_id, "text")
         try:
             # Group answers stream + render exactly like DMs.
-            await deliver_answer(
+            tokens = await deliver_answer(
                 message,
                 ctx,
                 lang,
@@ -65,12 +67,23 @@ def build_router(ctx: AppContext) -> Router:
                 model=model,
                 api_key=api_key,
             )
+            if not byo and tokens > 0:
+                await ctx.credits.charge(invoker_id, ctx.credits.text_cost_tenths(tokens), "text")
         except OpenRouterError:
             logger.exception("Group LLM call failed")
             await message.reply(t("llm_error", lang))
         except Exception:  # noqa: BLE001
             logger.exception("Unexpected group LLM error")
             await message.reply(t("generic_error", lang))
+
+    async def _check_credits(message: Message, invoker_id: int, lang: str) -> bool:
+        """Soft balance check for non-BYO invokers; replies a paywall if empty."""
+        if await ctx.quota.has_byo_key(invoker_id):
+            return True
+        if await ctx.credits.has_any(invoker_id):
+            return True
+        await message.reply(t("credits_low", lang), reply_markup=build_credits_keyboard(lang))
+        return False
 
     def _on_cooldown(chat_id: int) -> bool:
         return time.time() - last_run.get(chat_id, 0.0) < s.group_cooldown_sec
@@ -123,9 +136,7 @@ def build_router(ctx: AppContext) -> Router:
             await message.reply(t("group_summary_empty", lang))
             return
 
-        ok, _ = await ctx.quota.consume_llm_call(invoker)
-        if not ok:
-            await message.reply(t("limit_llm", lang))
+        if not await _check_credits(message, invoker, lang):
             return
         last_run[chat_id] = time.time()
         await _run_llm(message, invoker, lang, GROUP_SUMMARY_SYSTEM, _format_items(items))
@@ -150,9 +161,7 @@ def build_router(ctx: AppContext) -> Router:
         if not items:
             await message.reply(t("group_summary_empty", lang))
             return
-        ok, _ = await ctx.quota.consume_llm_call(invoker)
-        if not ok:
-            await message.reply(t("limit_llm", lang))
+        if not await _check_credits(message, invoker, lang):
             return
         last_run[message.chat.id] = time.time()
         content = f"{_format_items(items)}\n\nQuestion: {question}"
@@ -174,9 +183,7 @@ def build_router(ctx: AppContext) -> Router:
         if not items:
             await message.reply(t("group_summary_empty", lang))
             return
-        ok, _ = await ctx.quota.consume_llm_call(invoker)
-        if not ok:
-            await message.reply(t("limit_llm", lang))
+        if not await _check_credits(message, invoker, lang):
             return
         last_run[message.chat.id] = time.time()
         await _run_llm(message, invoker, lang, GROUP_ACTIONS_SYSTEM, _format_items(items))

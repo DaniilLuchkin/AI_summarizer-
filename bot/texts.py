@@ -63,7 +63,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "один документ с именами отправителей.\n"
             "Дальше выберите действие на клавиатуре или просто напишите свой запрос. "
             "К любому действию можно добавить контекст (текст, файл или ссылку) или нажать "
-            "«▶️ Запустить» без него. Для презентации можно приложить свой шаблон .pptx/.potx.\n"
+            "«▶️ Запустить» без него.\n"
             "Файлы — до 20 МБ, длинное аудио делю автоматически, длинный ответ разбиваю "
             "на несколько сообщений. Ответ — на языке исходных сообщений.\n"
             "Как работают пачки: пересланные или отправленные сообщения собираются в одну "
@@ -128,7 +128,6 @@ TEXTS: dict[str, dict[str, str]] = {
         "building_pdf": "📄 Собираю PDF…",
         "building_image": "🎨 Генерирую изображение…",
         "presentation_caption": "📊 Презентация готова.",
-        "slides_gallery_title": "Фото",
         "pdf_caption": "📄 Документ готов.",
         "presentation_failed": "😕 Не удалось собрать презентацию.",
         "pdf_failed": "😕 Не удалось собрать PDF.",
@@ -144,46 +143,17 @@ TEXTS: dict[str, dict[str, str]] = {
         "action_pdf": "📄 PDF",
         "action_image": "🎨 Картинка",
         "action_custom": "✍️ Или просто напишите запрос ⬇️",
-        "btn_more": "✨ Ещё…",
-        "btn_back": "⬅️ Назад",
         # --- Monetization / account ---
-        "paywall_image": "🎨 Генерация изображений доступна на Pro.",
-        "paywall_pptx": "📊 Презентации доступны на Pro.",
         "paywall_generic": "Эта функция недоступна на текущем тарифе.",
-        "limit_audio": "Достигнут дневной лимит расшифровки аудио.",
-        "limit_photo": "Достигнут дневной лимит анализа фото.",
-        "limit_llm": "🚦 Достигнут дневной лимит запросов к модели.",
-        "item_not_transcribed": "не расшифровано: достигнут дневной лимит",
-        "item_not_ocr": "не распознано: достигнут дневной лимит",
-        "upgrade_hint": "ℹ️ Часть элементов пропущена из-за лимитов. Больше — на Pro: /pro",
-        "pro_benefits": (
-            "⭐ Forwardly Pro\n\n• Генерация изображений 🎨 и презентаций 📊\n"
-            "• Большие дневные лимиты аудио/фото/запросов\n"
-            "• Более мощная модель и больший контекст\n\n"
-            "Цена: {stars}⭐ или {usdt} USDT за 30 дней."
-        ),
         "btn_pay_stars": "⭐ Оплатить Stars",
-        "btn_pay_crypto": "💎 Оплатить криптой",
-        "btn_paid_check": "✅ Я оплатил — проверить",
         "payment_success": "🎉 Pro активирован! Спасибо за поддержку.",
         "payment_held": "⏳ Платёж получен, но требует проверки. Мы скоро всё подтвердим.",
-        "crypto_not_paid": "Платёж пока не виден. Если вы только что оплатили — подождите минуту и нажмите ещё раз.",
-        "usage_report": (
-            "📊 Тариф: {plan}\n\nОсталось сегодня:\n• 🎙 Аудио: {audio_min} мин\n"
-            "• 🖼 Анализ фото: {photos}\n• 💬 Текстовые действия: {llm}\n"
-            "• 🎨 Изображения: {images}\n• 📊 Презентации: {pptx}\n\n"
-            "🎁 Бонус при регистрации: {bonus_audio_min} мин аудио, {bonus_photos} фото\n\n"
-            "👥 Приглашайте друзей — бонус обоим:\n{invite}"
-        ),
-        "plan_pro": "Pro (до {date})",
-        "plan_free": "Free",
-        "byo_active": "Свой ключ (без лимитов)",
         "invite_text": (
             "👥 Ваша реферальная ссылка:\n{link}\n\nЗа каждого нового пользователя "
-            "вы оба получаете +{audio_min} мин аудио и +{photos} фото."
+            "вы оба получаете +{credits} кредитов."
         ),
-        "key_saved": "🔑 Ключ сохранён. Теперь запросы идут через ваш ключ OpenRouter без лимитов.",
-        "key_removed": "🔑 Ключ удалён. Снова действуют обычные лимиты.",
+        "key_saved": "🔑 Ключ сохранён. Запросы идут через ваш ключ OpenRouter — кредиты не списываются.",
+        "key_removed": "🔑 Ключ удалён. Вы снова на кредитной системе.",
         "key_invalid": "⚠️ Не получилось проверить ключ. Использование: /setkey <ваш ключ OpenRouter>",
         "prompt_saved": "💾 Промпт сохранён. Смотрите /prompts.",
         "prompts_empty": "У вас пока нет сохранённых промптов. Запустите свой запрос и нажмите «Сохранить».",
@@ -200,36 +170,50 @@ TEXTS: dict[str, dict[str, str]] = {
         "forgetme_done": "🗑 Готово. Все ваши данные удалены.",
         # --- Plans / upgrade ---
         "btn_upgrade": "⭐ Перейти на Pro",
-        "see_plans_hint": "Подробнее — /plans",
         "plans_header": "💎 Тарифы и цены",
         "plans_free_block": (
             "🆓 Free\n"
-            "• Бонус при регистрации: {signup_audio_min} мин расшифровки + "
-            "{signup_photos} анализов фото (разово)\n"
-            "• В день: {daily_audio_min} мин аудио, {daily_photos} фото, "
-            "{daily_llm} текстовых действий\n"
-            "• Краткое содержание, структура, ответы, follow-up письма, задачи, перевод, PDF\n"
-            "• До {saved_prompts} сохранённых промптов\n"
-            "❌ Без генерации изображений · ❌ Без презентаций"
+            "• {signup} кредитов для старта (разовый бонус)\n"
+            "• {daily} бесплатных кредитов каждый день (не накапливаются)\n"
+            "• Оплата по факту: текст ~0.1–0.2 кредита/действие · аудио 1 кредит/минута · "
+            "фото 0.5 кредита/фото"
         ),
         "plans_pro_block": (
-            "⭐ Pro\n"
-            "• Всё из Free и большие дневные лимиты: {pro_audio_min} мин аудио, "
-            "{pro_photos} фото, {pro_llm} текстовых действий\n"
-            "✅ Генерация изображений (до {pro_images}/день) · "
-            "✅ Презентации (до {pro_pptx}/день)\n"
-            "• Премиум-модель ({pro_model}), больший контекст ({pro_context} симв.)\n"
-            "• Безлимит сохранённых промптов"
+            "⭐ Pro — {stars} ⭐ / мес\n"
+            "• {pro_credits} кредитов каждый месяц — в 2× больше, чем вы платите ⭐\n"
+            "• −{discount}% на пакеты кредитов\n"
+            "• Премиум-модель, больший контекст, в группах /ask и /actions, безлимит промптов"
         ),
         "plans_byo_line": (
-            "🔑 Свой ключ OpenRouter (альтернатива) — без подписки. Через /setkey: "
-            "вы платите только за свой API и получаете без лимитов + все функции."
+            "🔑 Свой ключ — без подписки и кредитов: через /setkey вы платите напрямую "
+            "за свой API OpenRouter."
         ),
-        "plans_price_line": "💎 Pro — {stars} ⭐ / мес или {usdt} USDT / мес",
         "plans_pro_active": "✅ У вас Pro — действует до {date}.",
         "usage_pro_active": "✅ У вас Pro — действует до {date}.",
-        "usage_byo_active": "🔑 Свой ключ активен — без лимитов.",
-        "usage_upgrade_hint": "Больше лимитов на Pro — /plans",
+        "usage_byo_active": "🔑 Свой ключ активен — кредиты не списываются.",
+        # --- Credits ---
+        "balance_line": "💳 Кредиты: {persistent} (+{daily} бесплатных сегодня)",
+        "daily_floor_note": "🎁 Каждый день вам также начисляется {daily} бесплатных кредитов.",
+        "usage_invite": "👥 Зовите друзей — кредиты получаете оба:\n{invite}",
+        "credits_low": (
+            "💳 Кредиты закончились. Купите пакет или оформите Pro — это ежемесячные "
+            "кредиты и −30% на пакеты."
+        ),
+        "item_skipped_no_credits": "пропущено: нет кредитов",
+        "feature_unavailable": "Эта функция сейчас недоступна.",
+        "btn_buy_credits": "💳 Купить кредиты",
+        "buy_credits_header": "Выберите пакет кредитов (1 ⭐ = 1 кредит):",
+        "pack_label": "{credits} кредитов — {stars} ⭐",
+        "pack_invoice_title": "{credits} кредитов",
+        "pack_invoice_desc": "Пополнение на {credits} кредитов Forwardly.",
+        "credits_added": "🎉 Начислено {credits} кредитов. Пользуйтесь!",
+        "pro_value_math": (
+            "⭐ Forwardly Pro — {stars} ⭐ / мес\n\n"
+            "Покупка кредитов: 1 ⭐ = 1 кредит (то есть {stars} ⭐ → {stars} кредитов).\n"
+            "Pro: {stars} ⭐ → {pro_credits} кредитов — в 2× выгоднее — плюс −{discount}% на "
+            "пакеты кредитов, премиум-модель, больший контекст, вопросы в группах и "
+            "безлимит сохранённых промптов."
+        ),
         # --- Group mode ---
         "group_intro": (
             "👋 Привет! Я умею делать сводку группового чата.\n\n"
@@ -277,7 +261,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "models_reset_all_done": "↺ Все слоты сброшены к умолчаниям.",
         # --- Moved out of handlers / contextual hints ---
         "invoice_title": "Forwardly Pro",
-        "invoice_description": "Pro на 30 дней: изображения, презентации, больше лимиты и контекст.",
+        "invoice_description": "Forwardly Pro на 30 дней: ежемесячные кредиты, скидка на пакеты, премиум-модель, больший контекст.",
         "presentation_context_hint": (
             "📊 Можно приложить свой шаблон .pptx/.potx и/или добавить текст, файл или "
             "ссылку, затем отправьте — или нажмите ▶️ Запустить."
@@ -286,7 +270,6 @@ TEXTS: dict[str, dict[str, str]] = {
         "btn_confirm_delete": "✅ Да, удалить",
         "btn_cancel": "✖️ Отмена",
         "forgetme_cancelled": "Отменено — данные не тронуты.",
-        "stars_renew_note": "Подписка Stars продлевается автоматически; отменить — в Telegram. Оплата криптой разовая, на 30 дней.",
         "models_default": "по умолчанию",
     },
     # ================================================================= EN ===
@@ -307,8 +290,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "documents, photos). I transcribe media, read text from photos, and assemble "
             "one document labeled with sender names.\n"
             "Then pick an action on the keyboard or just type your prompt. You can add "
-            "context (text, a file, or a link) to any action, or tap “▶️ Run” without it. "
-            "For a presentation you can attach your own .pptx/.potx template.\n"
+            "context (text, a file, or a link) to any action, or tap “▶️ Run” without it.\n"
             "Files up to 20 MB, long audio is split automatically, long answers are split "
             "into several messages. The answer is in the language of your messages.\n"
             "How batches work: forwarded or sent messages collect into one batch; pick an "
@@ -370,7 +352,6 @@ TEXTS: dict[str, dict[str, str]] = {
         "building_pdf": "📄 Building the PDF…",
         "building_image": "🎨 Generating the image…",
         "presentation_caption": "📊 Presentation ready.",
-        "slides_gallery_title": "Images",
         "pdf_caption": "📄 Document ready.",
         "presentation_failed": "😕 Couldn't build the presentation.",
         "pdf_failed": "😕 Couldn't build the PDF.",
@@ -385,46 +366,17 @@ TEXTS: dict[str, dict[str, str]] = {
         "action_pdf": "📄 PDF",
         "action_image": "🎨 Image",
         "action_custom": "✍️ Or just type your prompt ⬇️",
-        "btn_more": "✨ More…",
-        "btn_back": "⬅️ Back",
         # --- Monetization / account ---
-        "paywall_image": "🎨 Image generation is a Pro feature.",
-        "paywall_pptx": "📊 Presentations are a Pro feature.",
         "paywall_generic": "This feature isn't available on your plan.",
-        "limit_audio": "Daily audio transcription limit reached.",
-        "limit_photo": "Daily photo analysis limit reached.",
-        "limit_llm": "🚦 Daily model-request limit reached.",
-        "item_not_transcribed": "not transcribed: daily limit reached",
-        "item_not_ocr": "not analyzed: daily limit reached",
-        "upgrade_hint": "ℹ️ Some items were skipped due to limits. Get more with Pro: /pro",
-        "pro_benefits": (
-            "⭐ Forwardly Pro\n\n• Image 🎨 and presentation 📊 generation\n"
-            "• Much higher daily audio/photo/request limits\n"
-            "• A stronger model and a larger context\n\n"
-            "Price: {stars}⭐ or {usdt} USDT for 30 days."
-        ),
         "btn_pay_stars": "⭐ Pay with Stars",
-        "btn_pay_crypto": "💎 Pay with crypto",
-        "btn_paid_check": "✅ I've paid — check",
         "payment_success": "🎉 Pro is active! Thanks for the support.",
         "payment_held": "⏳ Payment received but needs a quick review. We'll confirm shortly.",
-        "crypto_not_paid": "Payment not visible yet. If you just paid, wait a minute and tap again.",
-        "usage_report": (
-            "📊 Plan: {plan}\n\nRemaining today:\n• 🎙 Audio: {audio_min} min\n"
-            "• 🖼 Photo analyses: {photos}\n• 💬 Text actions: {llm}\n"
-            "• 🎨 Images: {images}\n• 📊 Presentations: {pptx}\n\n"
-            "🎁 Signup bonus: {bonus_audio_min} min audio, {bonus_photos} photos\n\n"
-            "👥 Invite friends — both get a bonus:\n{invite}"
-        ),
-        "plan_pro": "Pro (until {date})",
-        "plan_free": "Free",
-        "byo_active": "Your own key (no limits)",
         "invite_text": (
             "👥 Your referral link:\n{link}\n\nFor every new user, you both get "
-            "+{audio_min} min audio and +{photos} photos."
+            "+{credits} credits."
         ),
-        "key_saved": "🔑 Key saved. Your requests now use your own OpenRouter key with no limits.",
-        "key_removed": "🔑 Key removed. Standard limits apply again.",
+        "key_saved": "🔑 Key saved. Your requests now use your own OpenRouter key — no credits charged.",
+        "key_removed": "🔑 Key removed. You're back on the credit system.",
         "key_invalid": "⚠️ Couldn't validate the key. Usage: /setkey <your OpenRouter key>",
         "prompt_saved": "💾 Prompt saved. See /prompts.",
         "prompts_empty": "You have no saved prompts yet. Run a custom prompt and tap Save.",
@@ -441,36 +393,50 @@ TEXTS: dict[str, dict[str, str]] = {
         "forgetme_done": "🗑 Done. All your data has been deleted.",
         # --- Plans / upgrade ---
         "btn_upgrade": "⭐ Upgrade to Pro",
-        "see_plans_hint": "See /plans for details.",
         "plans_header": "💎 Plans & pricing",
         "plans_free_block": (
             "🆓 Free\n"
-            "• Signup bonus: {signup_audio_min} min transcription + "
-            "{signup_photos} photo analyses (one-time)\n"
-            "• Daily: {daily_audio_min} min audio, {daily_photos} photos, "
-            "{daily_llm} text actions\n"
-            "• Summaries, structure, replies, follow-up emails, action items, translation, PDF\n"
-            "• Up to {saved_prompts} saved prompts\n"
-            "❌ No image generation · ❌ No presentations"
+            "• {signup} credits to start (one-time bonus)\n"
+            "• {daily} free credits every day (use it or lose it — they don't carry over)\n"
+            "• Pay by usage: text ~0.1–0.2 credits/action · audio 1 credit/minute · "
+            "photo 0.5 credits/photo"
         ),
         "plans_pro_block": (
-            "⭐ Pro\n"
-            "• Everything in Free, with higher daily caps: {pro_audio_min} min audio, "
-            "{pro_photos} photos, {pro_llm} text actions\n"
-            "✅ Image generation (up to {pro_images}/day) · "
-            "✅ Presentations (up to {pro_pptx}/day)\n"
-            "• Premium model ({pro_model}), larger context ({pro_context} chars)\n"
-            "• Unlimited saved prompts"
+            "⭐ Pro — {stars} ⭐ / month\n"
+            "• {pro_credits} credits every month — 2× the Stars you pay\n"
+            "• {discount}% off extra credit packs\n"
+            "• Premium model, bigger context, group /ask & /actions, unlimited saved prompts"
         ),
         "plans_byo_line": (
-            "🔑 Your own OpenRouter key (alternative) — no subscription. Use /setkey: "
-            "you pay only for your own API usage, and get no limits + all features."
+            "🔑 Your own key — no subscription, no credits: use /setkey and pay your own "
+            "OpenRouter API directly."
         ),
-        "plans_price_line": "💎 Pro — {stars} ⭐ / month or {usdt} USDT / month",
         "plans_pro_active": "✅ You're on Pro — valid until {date}.",
         "usage_pro_active": "✅ You're on Pro — valid until {date}.",
-        "usage_byo_active": "🔑 Own key active — no limits.",
-        "usage_upgrade_hint": "More limits on Pro — /plans",
+        "usage_byo_active": "🔑 Own key active — no credits charged.",
+        # --- Credits ---
+        "balance_line": "💳 Credits: {persistent} (+{daily} free today)",
+        "daily_floor_note": "🎁 You also get {daily} free credits every day.",
+        "usage_invite": "👥 Invite friends — you both get credits:\n{invite}",
+        "credits_low": (
+            "💳 You're out of credits. Buy a credit pack, or go Pro for monthly "
+            "credits and 30% off packs."
+        ),
+        "item_skipped_no_credits": "skipped: out of credits",
+        "feature_unavailable": "That feature is currently unavailable.",
+        "btn_buy_credits": "💳 Buy credits",
+        "buy_credits_header": "Choose a credit pack (1 ⭐ = 1 credit):",
+        "pack_label": "{credits} credits — {stars} ⭐",
+        "pack_invoice_title": "{credits} credits",
+        "pack_invoice_desc": "Top up {credits} Forwardly credits.",
+        "credits_added": "🎉 Added {credits} credits. Enjoy!",
+        "pro_value_math": (
+            "⭐ Forwardly Pro — {stars} ⭐ / month\n\n"
+            "Buy credits: 1 ⭐ = 1 credit (so {stars} ⭐ → {stars} credits).\n"
+            "Pro: {stars} ⭐ → {pro_credits} credits — 2× the value — plus {discount}% off "
+            "extra credit packs, a premium model, bigger context, group Q&A, and "
+            "unlimited saved prompts."
+        ),
         # --- Group mode ---
         "group_intro": (
             "👋 Hi! I can recap your group chat.\n\n"
@@ -517,7 +483,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "models_reset_all_done": "↺ All slots reset to defaults.",
         # --- Moved out of handlers / contextual hints ---
         "invoice_title": "Forwardly Pro",
-        "invoice_description": "Pro for 30 days: images, presentations, higher limits and context.",
+        "invoice_description": "Forwardly Pro for 30 days: monthly credits, discounted credit packs, premium model, bigger context.",
         "presentation_context_hint": (
             "📊 You can attach your own .pptx/.potx template and/or add text, a file, or "
             "a link, then send — or tap ▶️ Run."
@@ -526,7 +492,6 @@ TEXTS: dict[str, dict[str, str]] = {
         "btn_confirm_delete": "✅ Yes, delete",
         "btn_cancel": "✖️ Cancel",
         "forgetme_cancelled": "Cancelled — your data is untouched.",
-        "stars_renew_note": "Stars subscription auto-renews; cancel it in Telegram. Crypto is a one-off for 30 days.",
         "models_default": "default",
     },
     # ================================================================= UK ===
@@ -548,7 +513,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "один документ з іменами відправників.\n"
             "Далі оберіть дію на клавіатурі або просто напишіть свій запит. До будь-якої "
             "дії можна додати контекст (текст, файл або посилання) чи натиснути "
-            "«▶️ Запустити» без нього. Для презентації можна додати свій шаблон .pptx/.potx.\n"
+            "«▶️ Запустити» без нього.\n"
             "Файли — до 20 МБ, довге аудіо ділю автоматично, довгу відповідь розбиваю "
             "на кілька повідомлень. Відповідь — мовою вихідних повідомлень.\n"
             "Як працюють пачки: переслані або надіслані повідомлення збираються в одну "
@@ -613,7 +578,6 @@ TEXTS: dict[str, dict[str, str]] = {
         "building_pdf": "📄 Збираю PDF…",
         "building_image": "🎨 Генерую зображення…",
         "presentation_caption": "📊 Презентація готова.",
-        "slides_gallery_title": "Світлини",
         "pdf_caption": "📄 Документ готовий.",
         "presentation_failed": "😕 Не вдалося зібрати презентацію.",
         "pdf_failed": "😕 Не вдалося зібрати PDF.",
@@ -628,46 +592,17 @@ TEXTS: dict[str, dict[str, str]] = {
         "action_pdf": "📄 PDF",
         "action_image": "🎨 Зображення",
         "action_custom": "✍️ Або просто напишіть запит ⬇️",
-        "btn_more": "✨ Ще…",
-        "btn_back": "⬅️ Назад",
         # --- Monetization / account ---
-        "paywall_image": "🎨 Генерація зображень доступна на Pro.",
-        "paywall_pptx": "📊 Презентації доступні на Pro.",
         "paywall_generic": "Ця функція недоступна на поточному тарифі.",
-        "limit_audio": "Досягнуто денного ліміту розшифрування аудіо.",
-        "limit_photo": "Досягнуто денного ліміту аналізу фото.",
-        "limit_llm": "🚦 Досягнуто денного ліміту запитів до моделі.",
-        "item_not_transcribed": "не розшифровано: досягнуто денного ліміту",
-        "item_not_ocr": "не розпізнано: досягнуто денного ліміту",
-        "upgrade_hint": "ℹ️ Частину елементів пропущено через ліміти. Більше — на Pro: /pro",
-        "pro_benefits": (
-            "⭐ Forwardly Pro\n\n• Генерація зображень 🎨 та презентацій 📊\n"
-            "• Значно більші денні ліміти аудіо/фото/запитів\n"
-            "• Потужніша модель і більший контекст\n\n"
-            "Ціна: {stars}⭐ або {usdt} USDT за 30 днів."
-        ),
         "btn_pay_stars": "⭐ Сплатити Stars",
-        "btn_pay_crypto": "💎 Сплатити криптою",
-        "btn_paid_check": "✅ Я сплатив — перевірити",
         "payment_success": "🎉 Pro активовано! Дякуємо за підтримку.",
         "payment_held": "⏳ Платіж отримано, але потрібна перевірка. Скоро підтвердимо.",
-        "crypto_not_paid": "Платіж поки не видно. Якщо ви щойно сплатили — зачекайте хвилину й натисніть ще раз.",
-        "usage_report": (
-            "📊 Тариф: {plan}\n\nЗалишилось сьогодні:\n• 🎙 Аудіо: {audio_min} хв\n"
-            "• 🖼 Аналіз фото: {photos}\n• 💬 Текстові дії: {llm}\n"
-            "• 🎨 Зображення: {images}\n• 📊 Презентації: {pptx}\n\n"
-            "🎁 Бонус за реєстрацію: {bonus_audio_min} хв аудіо, {bonus_photos} фото\n\n"
-            "👥 Запрошуйте друзів — бонус обом:\n{invite}"
-        ),
-        "plan_pro": "Pro (до {date})",
-        "plan_free": "Free",
-        "byo_active": "Власний ключ (без лімітів)",
         "invite_text": (
             "👥 Ваше реферальне посилання:\n{link}\n\nЗа кожного нового користувача "
-            "ви обидва отримуєте +{audio_min} хв аудіо та +{photos} фото."
+            "ви обидва отримуєте +{credits} кредитів."
         ),
-        "key_saved": "🔑 Ключ збережено. Тепер запити йдуть через ваш ключ OpenRouter без лімітів.",
-        "key_removed": "🔑 Ключ видалено. Знову діють звичайні ліміти.",
+        "key_saved": "🔑 Ключ збережено. Запити йдуть через ваш ключ OpenRouter — кредити не списуються.",
+        "key_removed": "🔑 Ключ видалено. Ви знову на кредитній системі.",
         "key_invalid": "⚠️ Не вдалося перевірити ключ. Використання: /setkey <ваш ключ OpenRouter>",
         "prompt_saved": "💾 Промпт збережено. Дивіться /prompts.",
         "prompts_empty": "У вас поки немає збережених промптів. Запустіть свій запит і натисніть «Зберегти».",
@@ -684,36 +619,50 @@ TEXTS: dict[str, dict[str, str]] = {
         "forgetme_done": "🗑 Готово. Усі ваші дані видалено.",
         # --- Plans / upgrade ---
         "btn_upgrade": "⭐ Перейти на Pro",
-        "see_plans_hint": "Деталі — /plans",
         "plans_header": "💎 Тарифи та ціни",
         "plans_free_block": (
             "🆓 Free\n"
-            "• Бонус за реєстрацію: {signup_audio_min} хв розшифрування + "
-            "{signup_photos} аналізів фото (одноразово)\n"
-            "• Щодня: {daily_audio_min} хв аудіо, {daily_photos} фото, "
-            "{daily_llm} текстових дій\n"
-            "• Короткий зміст, структура, відповіді, follow-up листи, завдання, переклад, PDF\n"
-            "• До {saved_prompts} збережених промптів\n"
-            "❌ Без генерації зображень · ❌ Без презентацій"
+            "• {signup} кредитів для старту (одноразовий бонус)\n"
+            "• {daily} безкоштовних кредитів щодня (не накопичуються)\n"
+            "• Оплата за фактом: текст ~0.1–0.2 кредита/дія · аудіо 1 кредит/хвилина · "
+            "фото 0.5 кредита/фото"
         ),
         "plans_pro_block": (
-            "⭐ Pro\n"
-            "• Усе з Free і більші денні ліміти: {pro_audio_min} хв аудіо, "
-            "{pro_photos} фото, {pro_llm} текстових дій\n"
-            "✅ Генерація зображень (до {pro_images}/день) · "
-            "✅ Презентації (до {pro_pptx}/день)\n"
-            "• Преміум-модель ({pro_model}), більший контекст ({pro_context} симв.)\n"
-            "• Безліміт збережених промптів"
+            "⭐ Pro — {stars} ⭐ / міс\n"
+            "• {pro_credits} кредитів щомісяця — у 2× більше, ніж ви платите ⭐\n"
+            "• −{discount}% на пакети кредитів\n"
+            "• Преміум-модель, більший контекст, у групах /ask і /actions, безліміт промптів"
         ),
         "plans_byo_line": (
-            "🔑 Власний ключ OpenRouter (альтернатива) — без підписки. Через /setkey: "
-            "ви платите лише за свій API і отримуєте без лімітів + усі функції."
+            "🔑 Власний ключ — без підписки та кредитів: через /setkey ви платите "
+            "напряму за свій API OpenRouter."
         ),
-        "plans_price_line": "💎 Pro — {stars} ⭐ / міс або {usdt} USDT / міс",
         "plans_pro_active": "✅ У вас Pro — діє до {date}.",
         "usage_pro_active": "✅ У вас Pro — діє до {date}.",
-        "usage_byo_active": "🔑 Власний ключ активний — без лімітів.",
-        "usage_upgrade_hint": "Більше лімітів на Pro — /plans",
+        "usage_byo_active": "🔑 Власний ключ активний — кредити не списуються.",
+        # --- Credits ---
+        "balance_line": "💳 Кредити: {persistent} (+{daily} безкоштовних сьогодні)",
+        "daily_floor_note": "🎁 Щодня вам також нараховується {daily} безкоштовних кредитів.",
+        "usage_invite": "👥 Запрошуйте друзів — кредити отримуєте обидва:\n{invite}",
+        "credits_low": (
+            "💳 Кредити закінчилися. Купіть пакет або оформіть Pro — це щомісячні "
+            "кредити та −30% на пакети."
+        ),
+        "item_skipped_no_credits": "пропущено: немає кредитів",
+        "feature_unavailable": "Ця функція зараз недоступна.",
+        "btn_buy_credits": "💳 Купити кредити",
+        "buy_credits_header": "Оберіть пакет кредитів (1 ⭐ = 1 кредит):",
+        "pack_label": "{credits} кредитів — {stars} ⭐",
+        "pack_invoice_title": "{credits} кредитів",
+        "pack_invoice_desc": "Поповнення на {credits} кредитів Forwardly.",
+        "credits_added": "🎉 Нараховано {credits} кредитів. Користуйтеся!",
+        "pro_value_math": (
+            "⭐ Forwardly Pro — {stars} ⭐ / міс\n\n"
+            "Купівля кредитів: 1 ⭐ = 1 кредит (тобто {stars} ⭐ → {stars} кредитів).\n"
+            "Pro: {stars} ⭐ → {pro_credits} кредитів — у 2× вигідніше — плюс −{discount}% на "
+            "пакети кредитів, преміум-модель, більший контекст, питання в групах і "
+            "безліміт збережених промптів."
+        ),
         # --- Group mode ---
         "group_intro": (
             "👋 Привіт! Я вмію робити зведення групового чату.\n\n"
@@ -761,7 +710,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "models_reset_all_done": "↺ Усі слоти скинуто до типових.",
         # --- Moved out of handlers / contextual hints ---
         "invoice_title": "Forwardly Pro",
-        "invoice_description": "Pro на 30 днів: зображення, презентації, більші ліміти та контекст.",
+        "invoice_description": "Forwardly Pro на 30 днів: щомісячні кредити, знижка на пакети, преміум-модель, більший контекст.",
         "presentation_context_hint": (
             "📊 Можна додати свій шаблон .pptx/.potx та/або текст, файл чи посилання, "
             "потім надішліть — або натисніть ▶️ Запустити."
@@ -770,7 +719,6 @@ TEXTS: dict[str, dict[str, str]] = {
         "btn_confirm_delete": "✅ Так, видалити",
         "btn_cancel": "✖️ Скасувати",
         "forgetme_cancelled": "Скасовано — дані не змінено.",
-        "stars_renew_note": "Підписка Stars продовжується автоматично; скасувати — у Telegram. Оплата криптою разова, на 30 днів.",
         "models_default": "типова",
     },
 }

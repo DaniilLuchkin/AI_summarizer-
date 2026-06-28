@@ -16,17 +16,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from bot.handlers import collect, execute
-from bot.handlers.run import (
-    ACTION_CB_PREFIX,
-    BACK_CB,
-    MORE_CB,
-    RUN_CB,
-    ActionStates,
-    build_actions_keyboard,
-    build_more_keyboard,
-    build_run_keyboard,
-)
-from bot.prompts import CUSTOM_KEY, label_key
+from bot.handlers.run import ACTION_CB_PREFIX, RUN_CB, ActionStates, build_run_keyboard
+from bot.prompts import CUSTOM_KEY, PRIMARY_ACTION_KEYS, label_key
 from bot.runtime import AppContext
 from bot.texts import resolve_lang, t
 
@@ -40,33 +31,6 @@ def build_router(ctx: AppContext) -> Router:
         # Override > detected > caller's language_code > en.
         return ctx.store.get_lang(message.chat.id) or resolve_lang(fallback_code)
 
-    # --- "More…" submenu navigation (swaps the keyboard in place) -------
-    @router.callback_query(F.data == MORE_CB)
-    async def on_more(callback: CallbackQuery) -> None:
-        await callback.answer()
-        if callback.message is None:
-            return
-        lang = _lang(callback.message, callback.from_user.language_code)
-        user = await ctx.quota.ensure_user(callback.from_user.id)
-        entitled = ctx.quota.is_pro(user) or ctx.quota.has_byo(user)
-        try:
-            await callback.message.edit_reply_markup(
-                reply_markup=build_more_keyboard(lang, entitled)
-            )
-        except Exception:  # noqa: BLE001 - message too old / unchanged
-            pass
-
-    @router.callback_query(F.data == BACK_CB)
-    async def on_back(callback: CallbackQuery) -> None:
-        await callback.answer()
-        if callback.message is None:
-            return
-        lang = _lang(callback.message, callback.from_user.language_code)
-        try:
-            await callback.message.edit_reply_markup(reply_markup=build_actions_keyboard(lang))
-        except Exception:  # noqa: BLE001
-            pass
-
     # --- Stage an action ------------------------------------------------
     @router.callback_query(F.data.startswith(ACTION_CB_PREFIX))
     async def on_action(callback: CallbackQuery, state: FSMContext) -> None:
@@ -76,6 +40,11 @@ def build_router(ctx: AppContext) -> Router:
         if message is None:
             return
         lang = _lang(message, callback.from_user.language_code)
+
+        # Disabled features could still arrive from a stale cached keyboard.
+        if key != CUSTOM_KEY and key not in PRIMARY_ACTION_KEYS:
+            await message.answer(t("feature_unavailable", lang))
+            return
 
         chat_state = ctx.store.get(message.chat.id)
         if chat_state is None or not chat_state.has_active_batch:
@@ -91,11 +60,9 @@ def build_router(ctx: AppContext) -> Router:
             return
 
         # Predefined: the bold command IS the echo; then offer context / Run.
-        # Presentation gets a tailored hint (it can take a .pptx/.potx template).
         label = t(label_key(key), lang)
-        hint_key = "presentation_context_hint" if key == "presentation" else "action_context_hint"
         await message.answer(f"<b>{label}</b>", parse_mode="HTML")
-        await message.answer(t(hint_key, lang), reply_markup=build_run_keyboard(lang))
+        await message.answer(t("action_context_hint", lang), reply_markup=build_run_keyboard(lang))
 
     # --- Run staged action with no added context ------------------------
     @router.callback_query(ActionStates.awaiting_input, F.data == RUN_CB)

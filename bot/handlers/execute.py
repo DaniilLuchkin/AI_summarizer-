@@ -18,7 +18,7 @@ from aiogram.types import (
     Message,
 )
 
-from bot.handlers.run import build_actions_keyboard, build_upgrade_keyboard, run_llm
+from bot.handlers.run import build_actions_keyboard, build_credits_keyboard, run_llm
 from bot.prompts import (
     CUSTOM_SYSTEM,
     DECK_PLAN_SYSTEM,
@@ -41,21 +41,9 @@ MAX_LINKS = 3
 _CAPTION_LIMIT = 1024
 _PPTX_EXTS = (".pptx", ".potx")
 
-# Maps a quota reason code to a localized message key.
-_LIMIT_TEXT = {
-    "llm": "limit_llm",
-    "image": "paywall_image",
-    "pptx": "paywall_pptx",
-    "generic": "paywall_generic",
-}
-
-
-async def _send_paywall(message: Message, reason: str | None, lang: str) -> None:
-    """Send a brief limit/paywall message with a one-tap upgrade button."""
-    text = t(_LIMIT_TEXT.get(reason or "generic", "paywall_generic"), lang)
-    await message.answer(
-        f"{text}\n{t('see_plans_hint', lang)}", reply_markup=build_upgrade_keyboard(lang)
-    )
+async def _send_paywall(message: Message, lang: str) -> None:
+    """Out-of-credits message with Buy-credits + Upgrade buttons."""
+    await message.answer(t("credits_low", lang), reply_markup=build_credits_keyboard(lang))
 
 
 # --- Context gathering ---------------------------------------------------
@@ -167,18 +155,17 @@ async def run_staged(
         added_text = (source_message.text or source_message.caption or "").strip()
         parts, template = await collect_context(ctx, bot, source_message, lang)
 
-    # --- Quota / feature gate (the paywall appears at the moment of value) ---
-    if action_key == "custom" or action_key in TEXT_ACTION_KEYS or action_key == "pdf":
-        ok, reason = await ctx.quota.consume_llm_call(user_id)
-    elif action_key == "presentation":
-        ok, reason = await ctx.quota.require_pptx(user_id)
-    elif action_key == "image":
-        ok, reason = await ctx.quota.require_image(user_id)
-    else:
-        await message.answer(t("generic_error", lang))
+    # Only text actions + custom prompts are active; PDF/presentation/image are
+    # feature-flagged off (their builder code stays in the repo, just unwired).
+    if action_key not in TEXT_ACTION_KEYS and action_key != "custom":
+        await message.answer(t("feature_unavailable", lang))
         return
-    if not ok:
-        await _send_paywall(message, reason, lang)
+
+    byo = ctx.quota.has_byo(await ctx.quota.ensure_user(user_id))
+    # Soft balance check (non-BYO): text is charged AFTER the response by tokens,
+    # so here we only block when the user is already at zero.
+    if not byo and not await ctx.credits.has_any(user_id):
+        await _send_paywall(message, lang)
         return
 
     api_key = await ctx.quota.api_key_for(user_id)
@@ -193,35 +180,16 @@ async def run_staged(
         chat_state.last_custom_prompt = added_text.strip() or None
         await run_llm(
             message, ctx, lang, CUSTOM_SYSTEM, content, model, api_key,
-            formatted=formatted, as_file=as_file,
+            formatted=formatted, as_file=as_file, user_id=user_id, charge_text=not byo,
         )
         if chat_state.last_custom_prompt:
             await _offer_save_prompt(message, lang)
-    elif action_key in TEXT_ACTION_KEYS:
+    else:  # a predefined text action
         content = _build_action_content(document, added_text, parts)
         await run_llm(
             message, ctx, lang, SYSTEM_PROMPTS[action_key], content, model, api_key,
-            formatted=formatted, as_file=as_file,
+            formatted=formatted, as_file=as_file, user_id=user_id, charge_text=not byo,
         )
-    elif action_key == "presentation":
-        content = _build_action_content(document, added_text, parts)
-        photos = {p["id"]: p["bytes"] for p in chat_state.photos}
-        if photos:
-            content += "\n\n=== AVAILABLE PHOTOS ===\n" + "\n".join(
-                f"#{p['id']}: {_first_line(p['desc'])}" for p in chat_state.photos
-            )
-        want_gallery = bool(photos) and _wants_images(added_text)
-        await _make_presentation(
-            message, ctx, lang, content, template, api_key, user_id,
-            photos, want_gallery, t("slides_gallery_title", lang),
-        )
-    elif action_key == "pdf":
-        content = _build_action_content(document, added_text, parts)
-        await _make_pdf(message, ctx, lang, content, model, api_key)
-    elif action_key == "image":
-        content = _build_action_content(document, added_text, parts)
-        image_model = await ctx.models.resolve(user_id, "image")
-        await _make_image(message, ctx, lang, content, model, api_key, image_model)
 
 
 async def run_typed_custom(ctx: AppContext, message: Message, bot: Bot, lang: str) -> None:
@@ -314,11 +282,7 @@ async def _polish_deck(ctx, plan, photos, api_key, user_id, deck_bytes):
     s = ctx.settings
 
     async def detect_slide(slide_no: int, jpg: bytes) -> str:
-        # QA vision calls count toward usage like other calls (best-effort).
-        try:
-            await ctx.quota.consume_llm_call(user_id)
-        except Exception:  # noqa: BLE001
-            pass
+        # (Presentations are feature-flagged off; this builder code is unwired.)
         prompt = f"{DECK_QA_SYSTEM}\nThis is slide {slide_no} of the deck."
         return await ctx.orclient.vision(jpg, prompt, "image/jpeg", api_key=api_key, model=s.qa_vision_model)
 

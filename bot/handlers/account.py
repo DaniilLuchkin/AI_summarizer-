@@ -20,8 +20,9 @@ from aiogram.types import (
 )
 
 from bot.handlers import execute
-from bot.handlers.run import build_upgrade_keyboard
+from bot.handlers.run import build_credits_keyboard, build_upgrade_keyboard
 from bot.runtime import AppContext
+from bot.services.credits import fmt
 from bot.texts import resolve_lang, t
 
 logger = logging.getLogger(__name__)
@@ -72,36 +73,27 @@ def build_router(ctx: AppContext) -> Router:
     @router.message(Command("usage"))
     async def cmd_usage(message: Message, bot: Bot) -> None:
         lang = _lang(message)
-        r = await ctx.quota.remaining(message.from_user.id)
-        plan = (
-            t("plan_pro", lang).format(date=r["pro_until"].strftime("%Y-%m-%d"))
-            if r["pro"]
-            else (t("byo_active", lang) if r["byo"] else t("plan_free", lang))
-        )
-        invite = await _invite_link(bot, r["referral_code"])
-        report = t("usage_report", lang).format(
-            plan=plan,
-            audio_min=r["audio_sec"] // 60,
-            photos=r["photos"],
-            llm=r["llm_calls"],
-            images=r["images"],
-            pptx=r["pptx"],
-            bonus_audio_min=r["bonus_audio_sec"] // 60,
-            bonus_photos=r["bonus_photos"],
-            invite=invite,
-        )
-        # Tier-mirroring CTA at the bottom: upgrade button for free users only.
-        if r["pro"]:
-            report += "\n\n" + t("usage_pro_active", lang).format(
-                date=r["pro_until"].strftime("%Y-%m-%d")
-            )
-            await message.answer(report)
-        elif r["byo"]:
-            report += "\n\n" + t("usage_byo_active", lang)
+        uid = message.from_user.id
+        user = await ctx.quota.ensure_user(uid)
+        persistent, daily = await ctx.credits.balance(uid)
+        pro, byo = ctx.quota.is_pro(user), ctx.quota.has_byo(user)
+        invite = await _invite_link(bot, user["referral_code"])
+
+        lines = [t("balance_line", lang).format(persistent=fmt(persistent), daily=fmt(daily))]
+        if pro:
+            lines.append(t("usage_pro_active", lang).format(
+                date=user["pro_until"].strftime("%Y-%m-%d")))
+        elif byo:
+            lines.append(t("usage_byo_active", lang))
+        elif s.daily_free_credits > 0:
+            lines.append(t("daily_floor_note", lang).format(daily=s.daily_free_credits))
+        lines.append(t("usage_invite", lang).format(invite=invite))
+        report = "\n".join(lines)
+
+        if pro or byo:
             await message.answer(report)
         else:
-            report += "\n\n" + t("usage_upgrade_hint", lang)
-            await message.answer(report, reply_markup=build_upgrade_keyboard(lang))
+            await message.answer(report, reply_markup=build_credits_keyboard(lang))
 
     @router.message(Command("invite"))
     async def cmd_invite(message: Message, bot: Bot) -> None:
@@ -109,10 +101,7 @@ def build_router(ctx: AppContext) -> Router:
         user = await ctx.quota.ensure_user(message.from_user.id)
         link = await _invite_link(bot, user["referral_code"])
         await message.answer(
-            t("invite_text", lang).format(
-                link=link, audio_min=s.referral_bonus_audio_sec // 60,
-                photos=s.referral_bonus_photos,
-            )
+            t("invite_text", lang).format(link=link, credits=s.referral_bonus_credits)
         )
 
     @router.message(Command("privacy"))

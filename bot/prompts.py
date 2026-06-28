@@ -11,12 +11,9 @@ from __future__ import annotations
 TEXT_ACTION_KEYS = ["summary", "structure", "reply", "email", "items", "translate"]
 CUSTOM_KEY = "custom"
 
-# Inline-keyboard layout: the everyday text actions in the primary grid, the
-# heavier exports under a "More…" submenu. PRO_ACTION_KEYS are flagged 🔒 for
-# non-Pro users.
+# Inline-keyboard layout: the text actions shown in the action grid. PDF /
+# presentation / image are feature-flagged off, so the grid is text-only.
 PRIMARY_ACTION_KEYS = ["summary", "structure", "reply", "email", "items", "translate"]
-MORE_ACTION_KEYS = ["presentation", "pdf", "image"]
-PRO_ACTION_KEYS = {"presentation", "image"}
 
 
 def label_key(action_key: str) -> str:

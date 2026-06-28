@@ -53,19 +53,21 @@ class Database:
         self,
         telegram_id: int,
         referral_code: str,
-        bonus_audio_sec: int,
-        bonus_photos: int,
         referred_by: int | None,
     ) -> asyncpg.Record | None:
-        """Insert a user if absent. Returns the row, or None if it already existed."""
+        """Insert a user if absent. Returns the row, or None if it already existed.
+
+        Credit balances start at 0; the signup bonus is granted explicitly (once)
+        by the credit service so it is logged in the ledger.
+        """
         return await self.pool.fetchrow(
             """
-            INSERT INTO users (telegram_id, bonus_audio_sec, bonus_photos, referral_code, referred_by)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO users (telegram_id, referral_code, referred_by)
+            VALUES ($1, $2, $3)
             ON CONFLICT (telegram_id) DO NOTHING
             RETURNING *
             """,
-            telegram_id, bonus_audio_sec, bonus_photos, referral_code, referred_by,
+            telegram_id, referral_code, referred_by,
         )
 
     async def user_by_referral_code(self, code: str) -> asyncpg.Record | None:
@@ -86,50 +88,77 @@ class Database:
             "UPDATE users SET byo_key_enc=$2 WHERE telegram_id=$1", telegram_id, enc
         )
 
-    async def add_bonus(self, telegram_id: int, audio_sec: int, photos: int) -> None:
+    # --- Credits (all amounts in INTEGER tenths of a credit) -------------
+    async def refresh_daily(self, telegram_id: int, floor_tenths: int, today: dt.date) -> None:
+        """Reset the daily free bucket to `floor_tenths` once per day (set, not add)."""
         await self.pool.execute(
-            "UPDATE users SET bonus_audio_sec = bonus_audio_sec + $2, "
-            "bonus_photos = bonus_photos + $3 WHERE telegram_id=$1",
-            telegram_id, audio_sec, photos,
+            "UPDATE users SET daily_credits=$2, daily_credits_date=$3 "
+            "WHERE telegram_id=$1 AND daily_credits_date IS DISTINCT FROM $3",
+            telegram_id, floor_tenths, today,
         )
 
-    async def consume_bonus(self, telegram_id: int, audio_sec: int, photos: int) -> None:
-        await self.pool.execute(
-            "UPDATE users SET bonus_audio_sec = GREATEST(bonus_audio_sec - $2, 0), "
-            "bonus_photos = GREATEST(bonus_photos - $3, 0) WHERE telegram_id=$1",
-            telegram_id, audio_sec, photos,
-        )
+    async def grant_credits(self, telegram_id: int, tenths: int, reason: str) -> None:
+        """Add `tenths` to the persistent bucket and log it."""
+        async with self.pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute(
+                    "UPDATE users SET credits = credits + $2 WHERE telegram_id=$1",
+                    telegram_id, tenths,
+                )
+                await conn.execute(
+                    "INSERT INTO credit_ledger (telegram_id, delta, bucket, reason) "
+                    "VALUES ($1, $2, 'persistent', $3)",
+                    telegram_id, tenths, reason,
+                )
 
-    # --- Daily usage -----------------------------------------------------
-    async def get_usage(self, telegram_id: int, day: dt.date) -> asyncpg.Record | None:
-        return await self.pool.fetchrow(
-            "SELECT * FROM usage_daily WHERE telegram_id=$1 AND day=$2", telegram_id, day
-        )
+    async def charge_credits(
+        self, telegram_id: int, tenths: int, reason: str
+    ) -> tuple[int, int] | None:
+        """Atomically spend `tenths`: daily bucket first, then persistent.
 
-    async def incr_usage(
-        self,
-        telegram_id: int,
-        day: dt.date,
-        *,
-        audio_sec: int = 0,
-        photos: int = 0,
-        llm_calls: int = 0,
-        images: int = 0,
-        pptx: int = 0,
-    ) -> None:
-        await self.pool.execute(
-            """
-            INSERT INTO usage_daily (telegram_id, day, audio_sec, photos, llm_calls, images, pptx)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            ON CONFLICT (telegram_id, day) DO UPDATE SET
-              audio_sec = usage_daily.audio_sec + EXCLUDED.audio_sec,
-              photos    = usage_daily.photos    + EXCLUDED.photos,
-              llm_calls = usage_daily.llm_calls + EXCLUDED.llm_calls,
-              images    = usage_daily.images    + EXCLUDED.images,
-              pptx      = usage_daily.pptx      + EXCLUDED.pptx
-            """,
-            telegram_id, day, audio_sec, photos, llm_calls, images, pptx,
+        Returns (from_daily, from_persistent) on success, or None if the combined
+        balance is insufficient (nothing is charged). Logs one ledger row/bucket.
+        """
+        async with self.pool.acquire() as conn:
+            async with conn.transaction():
+                row = await conn.fetchrow(
+                    "SELECT credits, daily_credits FROM users WHERE telegram_id=$1 FOR UPDATE",
+                    telegram_id,
+                )
+                if row is None:
+                    return None
+                daily, persistent = row["daily_credits"], row["credits"]
+                if daily + persistent < tenths:
+                    return None
+                from_daily = min(daily, tenths)
+                from_persistent = tenths - from_daily
+                await conn.execute(
+                    "UPDATE users SET daily_credits = daily_credits - $2, "
+                    "credits = credits - $3 WHERE telegram_id=$1",
+                    telegram_id, from_daily, from_persistent,
+                )
+                if from_daily:
+                    await conn.execute(
+                        "INSERT INTO credit_ledger (telegram_id, delta, bucket, reason) "
+                        "VALUES ($1, $2, 'daily', $3)",
+                        telegram_id, -from_daily, reason,
+                    )
+                if from_persistent:
+                    await conn.execute(
+                        "INSERT INTO credit_ledger (telegram_id, delta, bucket, reason) "
+                        "VALUES ($1, $2, 'persistent', $3)",
+                        telegram_id, -from_persistent, reason,
+                    )
+                return from_daily, from_persistent
+
+    async def mark_signup_granted(self, telegram_id: int) -> bool:
+        """Flip signup_bonus_granted to TRUE once. Returns True if it was flipped."""
+        val = await self.pool.fetchval(
+            "UPDATE users SET signup_bonus_granted=TRUE "
+            "WHERE telegram_id=$1 AND signup_bonus_granted=FALSE RETURNING TRUE",
+            telegram_id,
         )
+        return bool(val)
 
     # --- Media cache -----------------------------------------------------
     async def media_cache_get(self, file_unique_id: str) -> str | None:

@@ -54,38 +54,40 @@ async def deliver_answer(
     api_key: str | None = None,
     formatted: bool = False,
     as_file: bool = False,
-) -> None:
+) -> int:
     """Run the chat call (streaming if enabled) and deliver the answer.
 
     Default: clean plain text, smart-split into several messages. `formatted` /
     `as_file` (set only when the user explicitly asks) switch to a formatted HTML
-    message or a raw ``.md`` file. Raises ``OpenRouterError`` on model failure so
-    callers keep their existing error handling.
+    message or a raw ``.md`` file. Returns the total (input+output) tokens used,
+    so the caller can charge credits. Raises ``OpenRouterError`` on model failure.
     """
     s = ctx.settings
     placeholder: Message | None = None
+    tokens = 0
     try:
         if s.streaming_enabled:
-            full, placeholder = await _stream(message, ctx, lang, messages, model, api_key)
+            full, placeholder, tokens = await _stream(message, ctx, lang, messages, model, api_key)
         else:
             placeholder = await message.answer(t("thinking", lang))
-            full = await ctx.orclient.chat(messages, model=model, api_key=api_key)
+            full, tokens = await ctx.orclient.chat_tokens(messages, model=model, api_key=api_key)
     except Exception:
         await _safe_delete(placeholder)
         raise
 
     full = (full or "").strip() or "—"
     await _finalize(message, full, lang, placeholder, formatted=formatted, as_file=as_file)
+    return tokens
 
 
 # --- Streaming -----------------------------------------------------------
 async def _stream(
     message: Message, ctx: AppContext, lang: str, messages, model, api_key
-) -> tuple[str, Message | None]:
+) -> tuple[str, Message | None, int]:
     """Stream deltas, showing progress via a draft (or an edited placeholder).
 
-    Returns (full_text, placeholder) where ``placeholder`` is the live-edited
-    message when the draft path is unavailable, else None (draft path).
+    Returns (full_text, placeholder, total_tokens) where ``placeholder`` is the
+    live-edited message when the draft path is unavailable, else None.
     """
     global _draft_supported
     s = ctx.settings
@@ -102,8 +104,11 @@ async def _stream(
         placeholder = await message.answer(t("thinking", lang))
 
     full = ""
+    usage_out: dict = {}
     last_edit = time.monotonic()
-    async for delta in ctx.orclient.chat_stream(messages, model=model, api_key=api_key):
+    async for delta in ctx.orclient.chat_stream(
+        messages, model=model, api_key=api_key, usage_out=usage_out
+    ):
         full += delta
         now = time.monotonic()
         if now - last_edit < throttle or not full.strip():
@@ -123,7 +128,7 @@ async def _stream(
                 pass  # "not modified" / transient -> skip this tick
         last_edit = now
 
-    return full, placeholder
+    return full, placeholder, int(usage_out.get("total_tokens", 0) or 0)
 
 
 async def _try_draft(message: Message, draft_id: int, text: str) -> bool:
