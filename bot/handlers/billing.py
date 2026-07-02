@@ -129,7 +129,12 @@ def build_router(ctx) -> Router:
     async def buy_pack(callback: CallbackQuery, bot: Bot) -> None:
         await callback.answer()
         lang = _lang(callback.message)
-        credits = int(callback.data.split(":", 1)[1])
+        raw = callback.data.split(":", 1)[1]
+        # Only ever invoice a configured pack size (never a value crafted in
+        # callback_data). The Stars amount is computed server-side from config.
+        if not raw.isdigit() or int(raw) not in s.credit_pack_sizes:
+            return
+        credits = int(raw)
         user = await ctx.quota.ensure_user(callback.from_user.id)
         stars = _pack_stars(credits, ctx.quota.is_pro(user), s)
         await bot(SendInvoice(
@@ -160,20 +165,42 @@ def build_router(ctx) -> Router:
 
     @router.pre_checkout_query()
     async def pre_checkout(query: PreCheckoutQuery) -> None:
-        await query.answer(ok=True)
+        # Approve only invoices we issued: the Pro subscription or a configured
+        # credit pack. Anything else is rejected.
+        payload = query.invoice_payload or ""
+        ok = payload == "pro_sub" or (
+            payload.startswith("pack:")
+            and payload.split(":", 1)[1].isdigit()
+            and int(payload.split(":", 1)[1]) in s.credit_pack_sizes
+        )
+        lang = resolve_lang(query.from_user.language_code if query.from_user else None)
+        await query.answer(ok=ok, error_message=None if ok else t("generic_error", lang))
 
     @router.message(F.successful_payment)
     async def on_successful_payment(message: Message, bot: Bot) -> None:
         sp = message.successful_payment
         lang = _lang(message)
         payload = sp.invoice_payload or ""
+        charge_id = sp.telegram_payment_charge_id
+
+        # Idempotency: Telegram may redeliver successful_payment — never grant twice
+        # for the same charge id.
+        if charge_id and await ctx.db.payment_exists(charge_id):
+            logger.info("Duplicate successful_payment ignored (charge %s)", charge_id)
+            return
 
         if payload.startswith("pack:"):
-            credits = int(payload.split(":", 1)[1])
+            try:
+                credits = int(payload.split(":", 1)[1])
+            except ValueError:
+                logger.warning("Bad pack payload: %r", payload)
+                return
+            if credits not in s.credit_pack_sizes:
+                logger.warning("Pack size %s not in configured packs", credits)
+                return
             await ctx.credits.grant_pack(message.from_user.id, credits)
             await ctx.db.payment_insert(
-                message.from_user.id, "stars", sp.total_amount, "XTR",
-                sp.telegram_payment_charge_id,
+                message.from_user.id, "stars", sp.total_amount, "XTR", charge_id,
             )
             await message.answer(t("credits_added", lang).format(credits=fmt(credits * 10)))
             return

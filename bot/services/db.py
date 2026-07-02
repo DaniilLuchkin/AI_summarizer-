@@ -224,6 +224,12 @@ class Database:
             telegram_id, provider, amount, currency, charge_id,
         )
 
+    async def payment_exists(self, charge_id: str) -> bool:
+        """True if a payment with this charge id was already recorded (idempotency)."""
+        return bool(await self.pool.fetchval(
+            "SELECT 1 FROM payments WHERE charge_id=$1 LIMIT 1", charge_id
+        ))
+
     async def payments_today(self, telegram_id: int) -> int:
         """Pro grants recorded for this user since UTC midnight (velocity guard)."""
         return await self.pool.fetchval(

@@ -7,13 +7,21 @@ a crude HTML-tag strip). Everything is capped to a max number of characters.
 
 from __future__ import annotations
 
+import asyncio
 import io
+import ipaddress
 import logging
 import re
+from urllib.parse import urljoin, urlparse
 
 import httpx
 
 logger = logging.getLogger(__name__)
+
+# Cap on bytes downloaded from a link (defence against huge-response DoS).
+MAX_FETCH_BYTES = 5 * 1024 * 1024
+# Max redirect hops we follow (each hop is SSRF-revalidated).
+MAX_REDIRECTS = 4
 
 # Matches http(s) URLs in free text.
 _URL_RE = re.compile(r"https?://[^\s<>\"')]+", re.IGNORECASE)
@@ -68,18 +76,49 @@ def _parse_docx(data: bytes) -> str:
 
 
 # --- Links ---------------------------------------------------------------
+async def _guard_url(url: str) -> None:
+    """Reject non-http(s) URLs and any host that resolves to a private/loopback/
+    link-local/reserved address — an SSRF guard against internal-service and
+    cloud-metadata access."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise ValueError(f"unsupported URL: {url}")
+    try:
+        infos = await asyncio.get_event_loop().getaddrinfo(parsed.hostname, None)
+    except OSError as exc:
+        raise ValueError(f"cannot resolve host: {parsed.hostname}") from exc
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0])
+        if (ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved
+                or ip.is_multicast or ip.is_unspecified):
+            raise ValueError(f"blocked non-public address for {parsed.hostname}")
+
+
 async def fetch_link(url: str, timeout: float, max_chars: int) -> str:
-    """Fetch a URL and extract its main readable text."""
+    """Fetch a URL and extract its main readable text.
+
+    Redirects are followed manually so every hop is SSRF-revalidated, and the
+    download is capped at MAX_FETCH_BYTES.
+    """
+    raw_bytes = b""
+    fallback_text = ""
     async with httpx.AsyncClient(
-        timeout=timeout, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0 (bot)"}
+        timeout=timeout, follow_redirects=False, headers={"User-Agent": "Mozilla/5.0 (bot)"}
     ) as client:
-        resp = await client.get(url)
-        resp.raise_for_status()
-        # Keep the raw bytes for the extractor (it detects the encoding itself,
-        # which correctly handles UTF-8 *and* declared charsets like cp1251).
-        # `resp.text` is httpx's charset-aware decode, used only as a fallback.
-        raw_bytes = resp.content
-        fallback_text = resp.text
+        for _ in range(MAX_REDIRECTS):
+            await _guard_url(url)  # validate BEFORE each request (incl. redirects)
+            resp = await client.get(url)
+            if resp.is_redirect and resp.headers.get("location"):
+                url = urljoin(url, resp.headers["location"])
+                continue
+            resp.raise_for_status()
+            # Keep raw bytes for the extractor (it detects the page encoding, which
+            # handles UTF-8 and declared charsets like cp1251 without mojibake).
+            raw_bytes = resp.content[:MAX_FETCH_BYTES]
+            fallback_text = resp.text
+            break
+        else:
+            raise ValueError("too many redirects")
 
     text = _extract_main_text(raw_bytes, fallback_text)
     return _truncate(text, max_chars)
