@@ -271,10 +271,6 @@ TEXTS: dict[str, dict[str, str]] = {
         # --- Moved out of handlers / contextual hints ---
         "invoice_title": "Forwardly Pro",
         "invoice_description": "Forwardly Pro на 30 дней: ежемесячные кредиты, скидка на пакеты, премиум-модель, больший контекст.",
-        "presentation_context_hint": (
-            "📊 Можно приложить свой шаблон .pptx/.potx и/или добавить текст, файл или "
-            "ссылку, затем отправьте — или нажмите ▶️ Запустить."
-        ),
         "save_prompt_offer": "💾 Сохранить этот запрос, чтобы запускать его повторно?",
         "btn_confirm_delete": "✅ Да, удалить",
         "btn_cancel": "✖️ Отмена",
@@ -502,10 +498,6 @@ TEXTS: dict[str, dict[str, str]] = {
         # --- Moved out of handlers / contextual hints ---
         "invoice_title": "Forwardly Pro",
         "invoice_description": "Forwardly Pro for 30 days: monthly credits, discounted credit packs, premium model, bigger context.",
-        "presentation_context_hint": (
-            "📊 You can attach your own .pptx/.potx template and/or add text, a file, or "
-            "a link, then send — or tap ▶️ Run."
-        ),
         "save_prompt_offer": "💾 Save this prompt to run it again later?",
         "btn_confirm_delete": "✅ Yes, delete",
         "btn_cancel": "✖️ Cancel",
@@ -738,10 +730,6 @@ TEXTS: dict[str, dict[str, str]] = {
         # --- Moved out of handlers / contextual hints ---
         "invoice_title": "Forwardly Pro",
         "invoice_description": "Forwardly Pro на 30 днів: щомісячні кредити, знижка на пакети, преміум-модель, більший контекст.",
-        "presentation_context_hint": (
-            "📊 Можна додати свій шаблон .pptx/.potx та/або текст, файл чи посилання, "
-            "потім надішліть — або натисніть ▶️ Запустити."
-        ),
         "save_prompt_offer": "💾 Зберегти цей запит, щоб запускати його повторно?",
         "btn_confirm_delete": "✅ Так, видалити",
         "btn_cancel": "✖️ Скасувати",
