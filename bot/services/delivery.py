@@ -4,12 +4,16 @@ One entry point, ``deliver_answer``, used by the private and group handlers.
 
 Flow
 ----
-1. If streaming is on, stream the SSE deltas from OpenRouter and push the
-   growing plain-text preview with ``sendMessageDraft`` (Bot API 9.3+, throttled
-   ~1/sec). The draft is an ephemeral ~30s preview.
-2. If ``sendMessageDraft`` isn't supported, fall back to a placeholder message
-   that is live-edited (``editMessageText``, same throttle).
-3. On finish the answer is *persisted* as real message(s). DEFAULT: markdown is
+1. A real "🤔 Thinking…" placeholder message is ALWAYS posted first, so the user
+   has visible feedback even if the live preview isn't shown or the model stalls
+   (an ephemeral draft alone disappears after ~30 s and looks like a hang).
+2. If streaming is on, the growing plain-text preview is pushed with
+   ``sendMessageDraft`` (Bot API 9.3+, throttled ~1/sec) or, if drafts are
+   unsupported, by live-editing the placeholder (same throttle).
+3. The whole model call runs under a hard deadline (``LLM_TIMEOUT_SEC``) —
+   OpenRouter keep-alive lines reset httpx's per-read timeout, so without a
+   total deadline a stalled provider hangs the request forever.
+4. On finish the answer is *persisted* as real message(s). DEFAULT: markdown is
    stripped and the text is smart-split into <=4096-char plain messages on
    logical boundaries (no file). Only when the user explicitly asked do we send
    a formatted HTML message (``formatted``) or a raw ``.md`` file (``as_file``).
@@ -21,6 +25,7 @@ rejection cleanly drops to the next fallback instead of erroring the handler.
 
 from __future__ import annotations
 
+import asyncio
 import itertools
 import logging
 import time
@@ -33,6 +38,7 @@ from bot import texts
 from bot.output import TELEGRAM_MESSAGE_LIMIT
 from bot.runtime import AppContext
 from bot.services import render
+from bot.services.openrouter import OpenRouterError
 from bot.texts import t
 
 logger = logging.getLogger(__name__)
@@ -63,14 +69,24 @@ async def deliver_answer(
     so the caller can charge credits. Raises ``OpenRouterError`` on model failure.
     """
     s = ctx.settings
-    placeholder: Message | None = None
+    # ALWAYS a real message (not just a draft): visible feedback from second one,
+    # and something to reuse/delete however the call ends.
+    placeholder = await message.answer(t("thinking", lang))
+    deadline = max(s.llm_timeout_sec, 30)
     tokens = 0
     try:
-        if s.streaming_enabled:
-            full, placeholder, tokens = await _stream(message, ctx, lang, messages, model, api_key)
-        else:
-            placeholder = await message.answer(t("thinking", lang))
-            full, tokens = await ctx.orclient.chat_tokens(messages, model=model, api_key=api_key)
+        # Hard total deadline: OpenRouter keep-alives reset httpx's per-read
+        # timeout, so a stalled provider would otherwise hang this forever.
+        async with asyncio.timeout(deadline):
+            if s.streaming_enabled:
+                full, tokens = await _stream(message, ctx, placeholder, messages, model, api_key)
+            else:
+                full, tokens = await ctx.orclient.chat_tokens(
+                    messages, model=model, api_key=api_key
+                )
+    except TimeoutError as exc:
+        await _safe_delete(placeholder)
+        raise OpenRouterError(f"LLM call exceeded the {deadline}s deadline") from exc
     except Exception:
         await _safe_delete(placeholder)
         raise
@@ -82,26 +98,15 @@ async def deliver_answer(
 
 # --- Streaming -----------------------------------------------------------
 async def _stream(
-    message: Message, ctx: AppContext, lang: str, messages, model, api_key
-) -> tuple[str, Message | None, int]:
-    """Stream deltas, showing progress via a draft (or an edited placeholder).
-
-    Returns (full_text, placeholder, total_tokens) where ``placeholder`` is the
-    live-edited message when the draft path is unavailable, else None.
-    """
+    message: Message, ctx: AppContext, placeholder: Message, messages, model, api_key
+) -> tuple[str, int]:
+    """Stream deltas, pushing a live preview via a draft (or by editing the
+    caller's placeholder). Returns (full_text, total_tokens)."""
     global _draft_supported
     s = ctx.settings
     throttle = max(s.stream_throttle_ms, 0) / 1000.0
     draft_id = next(_draft_counter)
-
     use_draft = _draft_supported is not False
-    placeholder: Message | None = None
-    # Immediate feedback + a one-shot probe of draft support.
-    if use_draft and not await _try_draft(message, draft_id, t("thinking", lang)):
-        use_draft = False
-        _draft_supported = False
-    if not use_draft:
-        placeholder = await message.answer(t("thinking", lang))
 
     full = ""
     usage_out: dict = {}
@@ -117,18 +122,17 @@ async def _stream(
         if use_draft:
             if await _try_draft(message, draft_id, preview):
                 _draft_supported = True
-            else:  # lost draft support mid-stream -> switch to edit placeholder
+            else:  # drafts unsupported -> live-edit the placeholder instead
                 use_draft = False
                 _draft_supported = False
-                placeholder = await message.answer(preview)
-        else:
+        if not use_draft:
             try:
                 await placeholder.edit_text(preview, parse_mode=None)
             except TelegramBadRequest:
                 pass  # "not modified" / transient -> skip this tick
         last_edit = now
 
-    return full, placeholder, int(usage_out.get("total_tokens", 0) or 0)
+    return full, int(usage_out.get("total_tokens", 0) or 0)
 
 
 async def _try_draft(message: Message, draft_id: int, text: str) -> bool:
