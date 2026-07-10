@@ -123,6 +123,14 @@ class Settings(BaseSettings):
     streaming_enabled: bool = True
     # Minimum gap (ms) between live draft/edit updates while streaming.
     stream_throttle_ms: int = 1000
+    # Hard total deadline (seconds) for one LLM answer. OpenRouter keep-alives
+    # reset the per-read HTTP timeout, so without this a stalled provider hangs
+    # the request (and the user sees silence) forever.
+    llm_timeout_sec: int = 300
+    # Discard updates queued while the bot was offline (old behaviour). Off by
+    # default: messages sent during a restart are processed after startup
+    # instead of being silently eaten.
+    drop_pending_updates: bool = False
 
     # --- Logging ----------------------------------------------------------
     log_level: str = "INFO"

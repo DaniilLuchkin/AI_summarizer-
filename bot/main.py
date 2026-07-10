@@ -84,8 +84,11 @@ async def _run() -> None:
 
     logger.info("Starting polling (public=%s)", not settings.allowed_ids)
     try:
-        # Drop any updates queued while the bot was offline.
-        await bot.delete_webhook(drop_pending_updates=True)
+        # delete_webhook switches the token to polling. Pending updates (messages
+        # sent while the bot was down/restarting) are KEPT by default so nothing
+        # a user sent gets silently eaten; DROP_PENDING_UPDATES=true restores the
+        # old discard behaviour.
+        await bot.delete_webhook(drop_pending_updates=settings.drop_pending_updates)
         await setup_commands(bot)
         await dp.start_polling(bot)
     finally:
