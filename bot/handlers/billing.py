@@ -202,6 +202,7 @@ def build_router(ctx) -> Router:
             await ctx.db.payment_insert(
                 message.from_user.id, "stars", sp.total_amount, "XTR", charge_id,
             )
+            await ctx.db.track_event(message.from_user.id, "purchase_pack")
             await message.answer(t("credits_added", lang).format(credits=fmt(credits * 10)))
             return
 
@@ -213,6 +214,8 @@ def build_router(ctx) -> Router:
             until=sp.subscription_expiration_date,
             days=s.pro_period_days,
         )
+        if granted:
+            await ctx.db.track_event(message.from_user.id, "purchase_pro")
         await message.answer(t("payment_success" if granted else "payment_held", lang))
 
     # --- /plans ---------------------------------------------------------

@@ -7,7 +7,7 @@ import logging
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from bot.prompts import CUSTOM_KEY, PRIMARY_ACTION_KEYS, label_key
+from bot.prompts import CUSTOM_KEY, PRIMARY_ACTION_KEYS, TEMPLATES, label_key
 from bot.runtime import AppContext
 from bot.services.credits import fmt
 from bot.services.delivery import deliver_answer
@@ -22,6 +22,9 @@ RUN_CB = "run:now"          # run the staged action without added context
 UPGRADE_CB = "upgrade"      # open the Pro purchase options (handled in billing)
 BUY_CB = "buy:open"         # open the Buy-credits packs (handled in billing)
 RETRY_CB = "retry:llm"      # re-run the chat's last LLM call after an error
+TPL_OPEN_CB = "tpl:open"    # show the freelancer-template submenu (in place)
+TPL_BACK_CB = "tpl:back"    # return from templates to the action grid
+TPL_CB_PREFIX = "tpl:"      # tpl:<key> — run a packaged template prompt
 
 # Warn once when the combined balance drops below this many tenths (5.0 credits).
 LOW_BALANCE_TENTHS = 50
@@ -58,7 +61,7 @@ class ActionStates(StatesGroup):
 
 
 def build_actions_keyboard(lang: str) -> InlineKeyboardMarkup:
-    """The text-action grid (2 per row) + the full-width Custom button."""
+    """The text-action grid (2 per row) + Templates + the full-width Custom button."""
     rows: list[list[InlineKeyboardButton]] = []
     row: list[InlineKeyboardButton] = []
     for key in PRIMARY_ACTION_KEYS:
@@ -70,11 +73,22 @@ def build_actions_keyboard(lang: str) -> InlineKeyboardMarkup:
             row = []
     if row:
         rows.append(row)
+    rows.append([InlineKeyboardButton(text=t("btn_templates", lang), callback_data=TPL_OPEN_CB)])
     rows.append(
         [InlineKeyboardButton(
             text=t(label_key(CUSTOM_KEY), lang), callback_data=f"{ACTION_CB_PREFIX}{CUSTOM_KEY}"
         )]
     )
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def build_templates_keyboard(lang: str) -> InlineKeyboardMarkup:
+    """The freelancer-template submenu (one per row) + Back."""
+    rows = [
+        [InlineKeyboardButton(text=t(f"tpl_{key}", lang), callback_data=f"{TPL_CB_PREFIX}{key}")]
+        for key in TEMPLATES
+    ]
+    rows.append([InlineKeyboardButton(text=t("btn_back", lang), callback_data=TPL_BACK_CB)])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 

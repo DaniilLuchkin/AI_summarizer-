@@ -20,12 +20,17 @@ from bot.handlers.run import (
     ACTION_CB_PREFIX,
     RETRY_CB,
     RUN_CB,
+    TPL_BACK_CB,
+    TPL_CB_PREFIX,
+    TPL_OPEN_CB,
     ActionStates,
+    build_actions_keyboard,
     build_credits_keyboard,
     build_run_keyboard,
+    build_templates_keyboard,
     run_llm,
 )
-from bot.prompts import CUSTOM_KEY, PRIMARY_ACTION_KEYS, label_key
+from bot.prompts import CUSTOM_KEY, PRIMARY_ACTION_KEYS, TEMPLATES, label_key
 from bot.runtime import AppContext
 from bot.texts import resolve_lang, t
 
@@ -63,6 +68,49 @@ def build_router(ctx: AppContext) -> Router:
             message, ctx, lang, last_run["system"], last_run["content"], model, api_key,
             formatted=last_run.get("formatted", False), as_file=last_run.get("as_file", False),
             user_id=uid, charge_text=not byo,
+        )
+
+    # --- Freelancer templates (submenu of packaged prompts) --------------
+    @router.callback_query(F.data == TPL_OPEN_CB)
+    async def on_templates_open(callback: CallbackQuery) -> None:
+        await callback.answer()
+        if callback.message is None:
+            return
+        lang = _lang(callback.message, callback.from_user.language_code)
+        try:
+            await callback.message.edit_reply_markup(reply_markup=build_templates_keyboard(lang))
+        except Exception:  # noqa: BLE001 - message too old / unchanged
+            pass
+
+    @router.callback_query(F.data == TPL_BACK_CB)
+    async def on_templates_back(callback: CallbackQuery) -> None:
+        await callback.answer()
+        if callback.message is None:
+            return
+        lang = _lang(callback.message, callback.from_user.language_code)
+        try:
+            await callback.message.edit_reply_markup(reply_markup=build_actions_keyboard(lang))
+        except Exception:  # noqa: BLE001
+            pass
+
+    @router.callback_query(F.data.startswith(TPL_CB_PREFIX))
+    async def on_template(callback: CallbackQuery, bot) -> None:
+        await callback.answer()
+        message = callback.message
+        if message is None:
+            return
+        key = callback.data[len(TPL_CB_PREFIX):]
+        template = TEMPLATES.get(key)
+        if template is None:  # "open"/"back" are handled above; unknown -> ignore
+            return
+        lang = _lang(message, callback.from_user.language_code)
+        # Echo which template runs, then execute it as a packaged custom prompt.
+        await message.answer(f"<b>{t(f'tpl_{key}', lang)}</b>", parse_mode="HTML")
+        await ctx.db.track_event(callback.from_user.id, f"template:{key}")
+        await execute.run_staged(
+            ctx, message, bot, lang, callback.from_user.id, "custom",
+            source_message=None, preset_instruction=template["prompt"],
+            use_tone=template["tone"],
         )
 
     # --- Stage an action ------------------------------------------------

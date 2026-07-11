@@ -101,6 +101,56 @@ class Database:
             "UPDATE users SET byo_active=$2 WHERE telegram_id=$1", telegram_id, active
         )
 
+    async def set_tone(self, telegram_id: int, tone: str | None) -> None:
+        await self.pool.execute(
+            "UPDATE users SET tone=$2 WHERE telegram_id=$1", telegram_id, tone
+        )
+
+    # --- Batch history -----------------------------------------------------
+    _BATCH_KEEP = 20  # most recent batches kept per user
+
+    async def batch_save(
+        self, telegram_id: int, chat_id: int, items_json: str, receipt: str
+    ) -> None:
+        """Store a finalized batch and prune anything beyond the newest N."""
+        async with self.pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute(
+                    "INSERT INTO batches (telegram_id, chat_id, items_json, receipt) "
+                    "VALUES ($1, $2, $3, $4)",
+                    telegram_id, chat_id, items_json, receipt,
+                )
+                await conn.execute(
+                    """
+                    DELETE FROM batches WHERE telegram_id=$1 AND id NOT IN (
+                      SELECT id FROM batches WHERE telegram_id=$1
+                      ORDER BY created_at DESC, id DESC LIMIT $2)
+                    """,
+                    telegram_id, self._BATCH_KEEP,
+                )
+
+    async def batches_list(self, telegram_id: int, limit: int = 5) -> list[asyncpg.Record]:
+        return await self.pool.fetch(
+            "SELECT id, receipt, created_at FROM batches WHERE telegram_id=$1 "
+            "ORDER BY created_at DESC, id DESC LIMIT $2",
+            telegram_id, limit,
+        )
+
+    async def batch_get(self, batch_id: int, telegram_id: int) -> asyncpg.Record | None:
+        return await self.pool.fetchrow(
+            "SELECT * FROM batches WHERE id=$1 AND telegram_id=$2", batch_id, telegram_id
+        )
+
+    # --- Analytics events ----------------------------------------------------
+    async def track_event(self, telegram_id: int, name: str) -> None:
+        """Fire-and-forget product event; must never break a user flow."""
+        try:
+            await self.pool.execute(
+                "INSERT INTO events (telegram_id, name) VALUES ($1, $2)", telegram_id, name
+            )
+        except Exception:  # noqa: BLE001
+            logger.warning("Event tracking failed: %s", name)
+
     # --- Credits (all amounts in INTEGER tenths of a credit) -------------
     async def refresh_daily(self, telegram_id: int, floor_tenths: int, today: dt.date) -> None:
         """Reset the daily free bucket to `floor_tenths` once per day (set, not add)."""
@@ -273,6 +323,8 @@ class Database:
             async with conn.transaction():
                 await conn.execute("DELETE FROM payments WHERE telegram_id=$1", telegram_id)
                 await conn.execute("DELETE FROM saved_prompts WHERE telegram_id=$1", telegram_id)
-                await conn.execute("DELETE FROM usage_daily WHERE telegram_id=$1", telegram_id)
                 await conn.execute("DELETE FROM user_models WHERE telegram_id=$1", telegram_id)
+                await conn.execute("DELETE FROM credit_ledger WHERE telegram_id=$1", telegram_id)
+                await conn.execute("DELETE FROM batches WHERE telegram_id=$1", telegram_id)
+                await conn.execute("DELETE FROM events WHERE telegram_id=$1", telegram_id)
                 await conn.execute("DELETE FROM users WHERE telegram_id=$1", telegram_id)

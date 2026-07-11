@@ -7,11 +7,13 @@ middleware; language comes from the in-memory store (override-aware).
 
 from __future__ import annotations
 
+import json
 import logging
 
 from aiogram import Bot, F, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
@@ -19,8 +21,8 @@ from aiogram.types import (
     Message,
 )
 
-from bot.handlers import execute
-from bot.handlers.run import BUY_CB, UPGRADE_CB, build_upgrade_keyboard
+from bot.handlers import collect, execute
+from bot.handlers.run import BUY_CB, UPGRADE_CB, build_actions_keyboard, build_upgrade_keyboard
 from bot.runtime import AppContext
 from bot.services.credits import fmt
 from bot.texts import resolve_lang, t
@@ -28,6 +30,11 @@ from bot.texts import resolve_lang, t
 logger = logging.getLogger(__name__)
 
 _TITLE_LEN = 40
+_TONE_MAX_LEN = 300
+
+
+class ToneStates(StatesGroup):
+    awaiting_tone = State()  # the next plain text becomes the saved tone
 
 
 def build_router(ctx: AppContext) -> Router:
@@ -126,6 +133,7 @@ def build_router(ctx: AppContext) -> Router:
             lines.append(t("usage_byo_active", lang))
         elif s.daily_free_credits > 0:
             lines.append(t("daily_floor_note", lang).format(daily=s.daily_free_credits))
+        lines.append(t("account_tone_set" if user.get("tone") else "account_tone_unset", lang))
         lines.append(t("usage_invite", lang).format(invite=invite))
 
         # Top-up is always relevant; the Pro pitch only while not on Pro.
@@ -134,6 +142,91 @@ def build_router(ctx: AppContext) -> Router:
             rows.append([InlineKeyboardButton(text=t("btn_upgrade", lang), callback_data=UPGRADE_CB)])
         await message.answer(
             "\n".join(lines), reply_markup=InlineKeyboardMarkup(inline_keyboard=rows)
+        )
+
+    # --- /tone: the saved writing style for replies/follow-ups ------------
+    @router.message(Command("tone"))
+    async def cmd_tone(message: Message, state: FSMContext) -> None:
+        lang = _lang(message)
+        user = await ctx.quota.ensure_user(message.from_user.id)
+        tone = user.get("tone")
+        await state.set_state(ToneStates.awaiting_tone)
+        if tone:
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text=t("btn_tone_reset", lang), callback_data="tone:reset")]
+            ])
+            await message.answer(t("tone_current", lang).format(tone=tone), reply_markup=keyboard)
+        else:
+            await message.answer(t("tone_not_set", lang))
+
+    @router.message(ToneStates.awaiting_tone, F.chat.type == "private")
+    async def on_tone_text(message: Message, state: FSMContext, bot: Bot) -> None:
+        lang = _lang(message)
+        # Forwarded/media while waiting for a tone -> it's a new batch, not a tone.
+        if collect.is_new_batch_trigger(message):
+            await state.clear()
+            await collect.handle_incoming(ctx, message, state, bot)
+            return
+        tone = (message.text or "").strip()
+        if not tone:
+            return
+        if len(tone) > _TONE_MAX_LEN:
+            await message.answer(t("tone_too_long", lang))
+            return
+        await state.clear()
+        await ctx.quota.ensure_user(message.from_user.id)
+        await ctx.db.set_tone(message.from_user.id, tone)
+        await message.answer(t("tone_saved", lang))
+
+    @router.callback_query(F.data == "tone:reset")
+    async def on_tone_reset(callback: CallbackQuery, state: FSMContext) -> None:
+        await callback.answer()
+        await state.clear()
+        await ctx.db.set_tone(callback.from_user.id, None)
+        await callback.message.answer(t("tone_reset", _lang(callback.message)))
+
+    # --- /history: restore one of the recent batches ----------------------
+    @router.message(Command("history"))
+    async def cmd_history(message: Message) -> None:
+        lang = _lang(message)
+        rows = await ctx.db.batches_list(message.from_user.id, limit=5)
+        if not rows:
+            await message.answer(t("history_empty", lang))
+            return
+        keyboard = [
+            [InlineKeyboardButton(
+                text=f"{row['created_at']:%d.%m %H:%M} · {row['receipt']}"[:60],
+                callback_data=f"hist:{row['id']}",
+            )]
+            for row in rows
+        ]
+        await message.answer(
+            t("history_list", lang), reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard)
+        )
+
+    @router.callback_query(F.data.startswith("hist:"))
+    async def on_history_pick(callback: CallbackQuery) -> None:
+        await callback.answer()
+        lang = _lang(callback.message)
+        raw = callback.data.split(":", 1)[1]
+        if not raw.isdigit():
+            return
+        row = await ctx.db.batch_get(int(raw), callback.from_user.id)
+        if row is None:
+            await callback.message.answer(t("history_empty", lang))
+            return
+        try:
+            items = json.loads(row["items_json"])
+        except ValueError:
+            await callback.message.answer(t("generic_error", lang))
+            return
+        # Restore as the current batch (replaces whatever was active).
+        chat_state = ctx.store.get_or_create(callback.message.chat.id)
+        ctx.store.start_new_batch(chat_state)
+        chat_state.item_texts = [str(i) for i in items]
+        await callback.message.answer(
+            t("batch_restored", lang).format(items=row["receipt"] or "—"),
+            reply_markup=build_actions_keyboard(lang),
         )
 
     @router.message(Command("invite"))
