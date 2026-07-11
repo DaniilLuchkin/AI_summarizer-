@@ -20,7 +20,7 @@ from aiogram.types import (
 )
 
 from bot.handlers import execute
-from bot.handlers.run import build_credits_keyboard, build_upgrade_keyboard
+from bot.handlers.run import BUY_CB, UPGRADE_CB, build_upgrade_keyboard
 from bot.runtime import AppContext
 from bot.services.credits import fmt
 from bot.texts import resolve_lang, t
@@ -106,8 +106,9 @@ def build_router(ctx: AppContext) -> Router:
             await callback.message.answer(msg)
 
     # --- Usage / privacy / invite ---------------------------------------
-    @router.message(Command("usage"))
-    async def cmd_usage(message: Message, bot: Bot) -> None:
+    @router.message(Command("account", "usage"))
+    async def cmd_account(message: Message, bot: Bot) -> None:
+        """The account hub: mode, balance, plan, invite link + purchase buttons."""
         lang = _lang(message)
         uid = message.from_user.id
         user = await ctx.quota.ensure_user(uid)
@@ -126,12 +127,14 @@ def build_router(ctx: AppContext) -> Router:
         elif s.daily_free_credits > 0:
             lines.append(t("daily_floor_note", lang).format(daily=s.daily_free_credits))
         lines.append(t("usage_invite", lang).format(invite=invite))
-        report = "\n".join(lines)
 
-        if pro or byo:
-            await message.answer(report)
-        else:
-            await message.answer(report, reply_markup=build_credits_keyboard(lang))
+        # Top-up is always relevant; the Pro pitch only while not on Pro.
+        rows = [[InlineKeyboardButton(text=t("btn_buy_credits", lang), callback_data=BUY_CB)]]
+        if not pro:
+            rows.append([InlineKeyboardButton(text=t("btn_upgrade", lang), callback_data=UPGRADE_CB)])
+        await message.answer(
+            "\n".join(lines), reply_markup=InlineKeyboardMarkup(inline_keyboard=rows)
+        )
 
     @router.message(Command("invite"))
     async def cmd_invite(message: Message, bot: Bot) -> None:

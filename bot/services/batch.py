@@ -38,6 +38,13 @@ class ChatState:
     # True when the current collecting batch replaced a previously finalized one
     # (drives the one-time "🔄 new batch started" notice at finalize).
     replaced_previous: bool = False
+    # Raw transcript of the batch's last audio item (drives the instant
+    # transcript delivery when the batch is a single voice/video message).
+    last_transcript: str | None = None
+    # Parameters of the last LLM run in this chat (for the 🔄 Retry button).
+    last_run: dict | None = None
+    # One-shot flag so the low-balance warning fires once per session.
+    low_balance_warned: bool = False
     # Forwarded photos kept for reuse on slides: [{id, bytes, mime, desc}].
     # Image bytes are in-memory only; capped (see BatchStore.retain_photo).
     photos: list[dict] = field(default_factory=list)
@@ -126,6 +133,9 @@ class BatchStore:
         state.limit_notified = False
         state.last_custom_prompt = None
         state.replaced_previous = False
+        state.last_transcript = None
+        state.last_run = None
+        state.low_balance_warned = False
         state.debounce_task = None
 
     def start_new_batch(self, state: ChatState) -> None:
@@ -140,6 +150,8 @@ class BatchStore:
         state.limit_notified = False
         state.last_custom_prompt = None
         state.replaced_previous = False
+        state.last_transcript = None
+        state.last_run = None
 
     def assemble_for_llm(self, state: ChatState, max_chars: int | None = None) -> tuple[str, bool]:
         """Join finalized items into one document, truncating oldest if too long.
