@@ -27,15 +27,20 @@ from aiogram.types import (
 
 from bot import texts
 from bot.handlers import execute
-from bot.handlers.run import build_actions_keyboard, build_credits_keyboard
+from bot.handlers.run import build_actions_keyboard, build_credits_keyboard, run_llm
+from bot.prompts import SYSTEM_PROMPTS
 from bot.runtime import AppContext
-from bot.services import media, transcribe, vision
+from bot.services import media, render, transcribe, vision
 from bot.services.batch import ChatState
 from bot.services.context import parse_file
 from bot.services.media import FileTooLarge
 from bot.texts import resolve_lang, t
 
 logger = logging.getLogger(__name__)
+
+# A single-voice batch whose transcript is longer than this also gets an
+# automatic summary (shorter transcripts speak for themselves).
+AUTO_SUMMARY_MIN_CHARS = 800
 
 
 def build_router(ctx: AppContext) -> Router:
@@ -157,6 +162,7 @@ async def _finalize(ctx: AppContext, chat_state: ChatState, bot: Bot) -> None:
     transcribe_model = await ctx.models.resolve(user_id, "transcribe")
     vision_model = await ctx.models.resolve(user_id, "vision")
 
+    chat_state.last_transcript = None  # only THIS batch's audio may set it
     item_texts: list[str] = []
     notes: list[str] = []
     limited = False  # True if any item was skipped for lack of credits
@@ -202,9 +208,74 @@ async def _finalize(ctx: AppContext, chat_state: ChatState, bot: Bot) -> None:
     # Prepend a one-time notice when this batch replaced a finalized one.
     if replaced:
         await bot.send_message(chat_state.chat_id, t("new_batch_started", lang))
+
+    # A single forwarded voice/video is the #1 use case: deliver the transcript
+    # immediately (no extra tap), and auto-summarize when it's long enough.
+    if len(pending) == 1 and chat_state.last_transcript and not limited:
+        await _deliver_single_voice(ctx, bot, chat_state, pending[0], lang, user_id, api_key, byo)
+
+    receipt = _receipt_items(pending) or "—"
     await bot.send_message(
-        chat_state.chat_id, t("batch_ready", lang), reply_markup=build_actions_keyboard(lang)
+        chat_state.chat_id,
+        t("batch_ready", lang).format(items=receipt),
+        reply_markup=build_actions_keyboard(lang),
     )
+
+
+async def _deliver_single_voice(
+    ctx: AppContext, bot: Bot, chat_state: ChatState, source: Message, lang: str,
+    user_id: int, api_key: str | None, byo: bool,
+) -> None:
+    """Send the raw transcript right away; auto-summarize long ones."""
+    transcript = chat_state.last_transcript or ""
+    await bot.send_message(chat_state.chat_id, t("voice_transcript_header", lang))
+    for chunk in render.split_plain(transcript):
+        await bot.send_message(chat_state.chat_id, chunk)
+
+    if len(transcript) <= AUTO_SUMMARY_MIN_CHARS:
+        return
+    # Soft credit check mirrors run_staged; skip silently if the balance is empty
+    # (the transcript itself is already delivered).
+    if not byo and not await ctx.credits.has_any(user_id):
+        return
+    model = await ctx.models.resolve(user_id, "text")
+    content = "\n\n".join(chat_state.item_texts)
+    await run_llm(
+        source, ctx, lang, SYSTEM_PROMPTS["summary"], content, model, api_key,
+        show_keyboard=False, user_id=user_id, charge_text=not byo,
+    )
+
+
+# --- Batch receipt ---------------------------------------------------------
+def _receipt_items(pending: list[Message]) -> str:
+    """Compact, language-neutral summary of what was collected: '💬 3 · 🎙 2 (3:40)'."""
+    texts = voices = photos = docs = 0
+    duration = 0
+    for m in pending:
+        media_item = m.voice or m.video_note or m.audio or m.video
+        if m.text:
+            texts += 1
+        elif media_item:
+            voices += 1
+            duration += getattr(media_item, "duration", 0) or 0
+        elif m.photo:
+            photos += 1
+        elif m.document:
+            docs += 1
+    parts: list[str] = []
+    if texts:
+        parts.append(f"💬 {texts}")
+    if voices:
+        parts.append(f"🎙 {voices} ({_fmt_duration(duration)})")
+    if photos:
+        parts.append(f"📷 {photos}")
+    if docs:
+        parts.append(f"📎 {docs}")
+    return " · ".join(parts)
+
+
+def _fmt_duration(seconds: int) -> str:
+    return f"{seconds // 60}:{seconds % 60:02d}"
 
 
 # --- Sender name + kind --------------------------------------------------
@@ -259,7 +330,8 @@ async def _process_message(
     # --- Audio-bearing items: probe duration -> charge -> cache/transcribe
     if msg.voice or msg.audio or msg.video_note or msg.video:
         return await _process_audio(
-            ctx, bot, msg, index, name, caption, lang, user_id, api_key, byo, transcribe_model
+            ctx, bot, msg, index, name, caption, lang, user_id, api_key, byo,
+            transcribe_model, chat_state,
         )
 
     if msg.photo:
@@ -297,7 +369,8 @@ async def _process_message(
     return None, None, False
 
 
-async def _process_audio(ctx, bot, msg, index, name, caption, lang, user_id, api_key, byo, transcribe_model):
+async def _process_audio(ctx, bot, msg, index, name, caption, lang, user_id, api_key, byo,
+                         transcribe_model, chat_state):
     """Handle voice/audio/video/video_note: charge by duration, cache, transcribe."""
     if msg.voice:
         file_id, fuid, fmt, kind, is_video = msg.voice.file_id, msg.voice.file_unique_id, "ogg", texts.KIND_VOICE, False
@@ -323,6 +396,7 @@ async def _process_audio(ctx, bot, msg, index, name, caption, lang, user_id, api
     # Cache hit avoids re-billing OpenRouter for the same file.
     cached = await ctx.db.media_cache_get(fuid)
     if cached is not None:
+        chat_state.last_transcript = cached
         return _label(index, name, kind, _join(cached, caption)), None, False
 
     transcript = await transcribe.transcribe_media(
@@ -334,6 +408,7 @@ async def _process_audio(ctx, bot, msg, index, name, caption, lang, user_id, api
             return _label(index, name, kind, caption), note, False
         return None, note, False
     await ctx.db.media_cache_put(fuid, "transcript", transcript)
+    chat_state.last_transcript = transcript
     return _label(index, name, kind, _join(transcript, caption)), None, False
 
 

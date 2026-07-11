@@ -52,6 +52,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "кружочки, видео, аудио, документы, фото. Медиа расшифрую, текст с фото распознаю.\n"
             "2️⃣ Выберите действие на клавиатуре — или просто напишите свой запрос текстом.\n"
             "3️⃣ Перед запуском можно добавить контекст: текст, файл или ссылку.\n\n"
+            "⚡ Быстрый старт: перешлите одно голосовое — сразу пришлю расшифровку.\n\n"
             "Ответ приходит на языке исходных сообщений.\n"
             "/help — подробнее · /plans — тарифы"
         ),
@@ -72,7 +73,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "/reset очищает её вручную.\n\n"
             "Команды\n"
             "• Основные: /start, /reset, /help, /lang\n"
-            "• Тариф и кредиты: /plans, /pro, /buy, /usage\n"
+            "• Аккаунт и тарифы: /account (баланс и покупки), /plans\n"
             "• Свой ключ и модели: /setkey, /removekey, /source, /models\n"
             "• Запросы: /prompts (сохранённые)\n"
             "• Друзья и данные: /invite, /privacy, /forgetme\n"
@@ -82,8 +83,11 @@ TEXTS: dict[str, dict[str, str]] = {
         "lang_set": "✅ Язык интерфейса — русский.",
         "finalizing": "🛠 Обрабатываю пачку (расшифровка, распознавание)…",
         "empty_batch": "Пачка пустая — нечего обрабатывать.",
-        "batch_ready": "✅ Пачка готова. Выберите действие — или просто напишите свой запрос.",
+        "batch_ready": "✅ Пачка готова: {items}\nВыберите действие — или просто напишите свой запрос.",
         "new_batch_started": "🔄 Начал новую пачку — предыдущая очищена.",
+        "voice_transcript_header": "🎙 Расшифровка:",
+        "btn_retry": "🔄 Повторить",
+        "credits_low_warning": "⚠️ Осталось мало кредитов: {balance}. Пополните, чтобы не прерываться.",
         "batch_limit_reached": (
             "⚠️ Достигнут лимит в {limit} сообщений на пачку. "
             "Лишние сообщения проигнорированы."
@@ -285,6 +289,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "videos, audio, documents, photos. I transcribe media and read text from photos.\n"
             "2️⃣ Pick an action on the keyboard — or just type your prompt.\n"
             "3️⃣ Before running, you can add context: text, a file, or a link.\n\n"
+            "⚡ Quick start: forward a single voice message — you'll get the transcript right away.\n\n"
             "The answer comes back in the language of your messages.\n"
             "/help — details · /plans — pricing"
         ),
@@ -303,7 +308,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "an answer starts a fresh batch (the old one is cleared); /reset clears it.\n\n"
             "Commands\n"
             "• Everyday: /start, /reset, /help, /lang\n"
-            "• Plan & credits: /plans, /pro, /buy, /usage\n"
+            "• Account & pricing: /account (balance & purchases), /plans\n"
             "• Your key & models: /setkey, /removekey, /source, /models\n"
             "• Prompts: /prompts (saved)\n"
             "• Friends & data: /invite, /privacy, /forgetme\n"
@@ -313,8 +318,11 @@ TEXTS: dict[str, dict[str, str]] = {
         "lang_set": "✅ Language set to English.",
         "finalizing": "🛠 Processing the batch (transcription, OCR)…",
         "empty_batch": "The batch is empty — nothing to process.",
-        "batch_ready": "✅ Batch ready. Pick an action — or just type your prompt.",
+        "batch_ready": "✅ Batch ready: {items}\nPick an action — or just type your prompt.",
         "new_batch_started": "🔄 Started a new batch — the previous one was cleared.",
+        "voice_transcript_header": "🎙 Transcript:",
+        "btn_retry": "🔄 Retry",
+        "credits_low_warning": "⚠️ Credits running low: {balance}. Top up so you're not interrupted.",
         "batch_limit_reached": (
             "⚠️ Reached the limit of {limit} messages per batch. Extra messages ignored."
         ),
@@ -512,6 +520,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "кружечки, відео, аудіо, документи, фото. Медіа розшифрую, текст із фото розпізнаю.\n"
             "2️⃣ Оберіть дію на клавіатурі — або просто напишіть свій запит текстом.\n"
             "3️⃣ Перед запуском можна додати контекст: текст, файл або посилання.\n\n"
+            "⚡ Швидкий старт: перешліть одне голосове — одразу надішлю розшифровку.\n\n"
             "Відповідь приходить мовою вихідних повідомлень.\n"
             "/help — докладніше · /plans — тарифи"
         ),
@@ -532,7 +541,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "/reset очищає її вручну.\n\n"
             "Команди\n"
             "• Основні: /start, /reset, /help, /lang\n"
-            "• Тариф і кредити: /plans, /pro, /buy, /usage\n"
+            "• Акаунт і тарифи: /account (баланс і покупки), /plans\n"
             "• Свій ключ і моделі: /setkey, /removekey, /source, /models\n"
             "• Запити: /prompts (збережені)\n"
             "• Друзі та дані: /invite, /privacy, /forgetme\n"
@@ -542,8 +551,11 @@ TEXTS: dict[str, dict[str, str]] = {
         "lang_set": "✅ Мова інтерфейсу — українська.",
         "finalizing": "🛠 Обробляю пачку (розшифрування, розпізнавання)…",
         "empty_batch": "Пачка порожня — немає що обробляти.",
-        "batch_ready": "✅ Пачка готова. Оберіть дію — або просто напишіть свій запит.",
+        "batch_ready": "✅ Пачка готова: {items}\nОберіть дію — або просто напишіть свій запит.",
         "new_batch_started": "🔄 Почав нову пачку — попередню очищено.",
+        "voice_transcript_header": "🎙 Розшифровка:",
+        "btn_retry": "🔄 Повторити",
+        "credits_low_warning": "⚠️ Залишилося мало кредитів: {balance}. Поповніть, щоб не перериватися.",
         "batch_limit_reached": (
             "⚠️ Досягнуто ліміту в {limit} повідомлень на пачку. "
             "Зайві повідомлення проігноровано."

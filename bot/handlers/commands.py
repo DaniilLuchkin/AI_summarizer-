@@ -26,6 +26,18 @@ from bot.texts import resolve_lang, t
 LANG_CB_PREFIX = "lang:"
 
 
+def _lang_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="🇬🇧 English", callback_data=f"{LANG_CB_PREFIX}en"),
+                InlineKeyboardButton(text="🇷🇺 Русский", callback_data=f"{LANG_CB_PREFIX}ru"),
+                InlineKeyboardButton(text="🇺🇦 Українська", callback_data=f"{LANG_CB_PREFIX}uk"),
+            ]
+        ]
+    )
+
+
 def build_router(ctx: AppContext) -> Router:
     router = Router(name="commands")
 
@@ -56,6 +68,10 @@ def build_router(ctx: AppContext) -> Router:
         await state.clear()
         ctx.store.clear_session(message.chat.id)
         await message.answer(t("welcome", lang))
+        # No explicit language choice yet -> offer the picker right away, so a
+        # Russian-speaking user with an English phone isn't stuck with English UI.
+        if not user["lang_override"]:
+            await message.answer(t("lang_choose", lang), reply_markup=_lang_keyboard())
 
     @router.message(Command("reset"))
     async def cmd_reset(message: Message, state: FSMContext) -> None:
@@ -73,17 +89,7 @@ def build_router(ctx: AppContext) -> Router:
     @router.message(Command("lang"))
     async def cmd_lang(message: Message, state: FSMContext) -> None:
         await state.clear()
-        lang = _lang(message)
-        keyboard = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [
-                    InlineKeyboardButton(text="🇬🇧 English", callback_data=f"{LANG_CB_PREFIX}en"),
-                    InlineKeyboardButton(text="🇷🇺 Русский", callback_data=f"{LANG_CB_PREFIX}ru"),
-                    InlineKeyboardButton(text="🇺🇦 Українська", callback_data=f"{LANG_CB_PREFIX}uk"),
-                ]
-            ]
-        )
-        await message.answer(t("lang_choose", lang), reply_markup=keyboard)
+        await message.answer(t("lang_choose", _lang(message)), reply_markup=_lang_keyboard())
 
     @router.callback_query(F.data.startswith(LANG_CB_PREFIX))
     async def set_lang_cb(callback: CallbackQuery) -> None:

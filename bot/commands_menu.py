@@ -1,6 +1,8 @@
 """Bot command menu definitions, shared by main.py and handlers/commands.py.
 
 Kept in its own module so both can import it without a circular import.
+The menu is deliberately short: /account is the hub for balance/purchases
+(/usage, /buy and /pro still work as commands, just aren't listed).
 """
 
 from __future__ import annotations
@@ -33,21 +35,17 @@ COMMANDS: dict[str, list[BotCommand]] = {
     "en": [
         BotCommand(command="start", description="What this bot does"),
         BotCommand(command="reset", description="Clear the current batch"),
-        BotCommand(command="pro", description="Upgrade to Pro"),
-        BotCommand(command="buy", description="Buy credits"),
+        BotCommand(command="account", description="Balance, plan & purchases"),
         BotCommand(command="plans", description="Plans & pricing"),
-        BotCommand(command="usage", description="Your usage & limits"),
-        BotCommand(command="models", description="Pick models per task (BYO key)"),
+        BotCommand(command="models", description="Pick models per task (own key)"),
         BotCommand(command="help", description="How it works"),
         BotCommand(command="lang", description="Change interface language"),
     ],
     "ru": [
         BotCommand(command="start", description="Что умеет бот"),
         BotCommand(command="reset", description="Очистить текущую пачку"),
-        BotCommand(command="pro", description="Перейти на Pro"),
-        BotCommand(command="buy", description="Купить кредиты"),
+        BotCommand(command="account", description="Баланс, тариф и покупки"),
         BotCommand(command="plans", description="Тарифы и цены"),
-        BotCommand(command="usage", description="Лимиты и использование"),
         BotCommand(command="models", description="Модели под задачи (свой ключ)"),
         BotCommand(command="help", description="Как это работает"),
         BotCommand(command="lang", description="Сменить язык интерфейса"),
@@ -55,10 +53,8 @@ COMMANDS: dict[str, list[BotCommand]] = {
     "uk": [
         BotCommand(command="start", description="Що вміє бот"),
         BotCommand(command="reset", description="Очистити поточну пачку"),
-        BotCommand(command="pro", description="Перейти на Pro"),
-        BotCommand(command="buy", description="Купити кредити"),
+        BotCommand(command="account", description="Баланс, тариф і покупки"),
         BotCommand(command="plans", description="Тарифи та ціни"),
-        BotCommand(command="usage", description="Ліміти та використання"),
         BotCommand(command="models", description="Моделі під задачі (свій ключ)"),
         BotCommand(command="help", description="Як це працює"),
         BotCommand(command="lang", description="Змінити мову інтерфейсу"),
