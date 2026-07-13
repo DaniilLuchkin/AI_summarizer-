@@ -12,6 +12,7 @@ forwarded message arrives while an action is staged.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 
 from aiogram import Bot, F, Router
@@ -199,6 +200,16 @@ async def _finalize(ctx: AppContext, chat_state: ChatState, bot: Bot) -> None:
         await bot.send_message(chat_state.chat_id, t("empty_batch", lang))
         return
 
+    # Persist the batch for /history (text only; capped per user) + analytics.
+    receipt = _receipt_items(pending) or "—"
+    try:
+        await ctx.db.batch_save(
+            user_id, chat_state.chat_id, json.dumps(item_texts, ensure_ascii=False), receipt
+        )
+    except Exception:  # noqa: BLE001 - history is a convenience, never a blocker
+        logger.warning("Batch history save failed for chat %s", chat_state.chat_id)
+    await ctx.db.track_event(user_id, "batch_ready")
+
     # If any item was skipped for lack of credits, offer Buy credits / Upgrade.
     if limited:
         await bot.send_message(
@@ -214,7 +225,6 @@ async def _finalize(ctx: AppContext, chat_state: ChatState, bot: Bot) -> None:
     if len(pending) == 1 and chat_state.last_transcript and not limited:
         await _deliver_single_voice(ctx, bot, chat_state, pending[0], lang, user_id, api_key, byo)
 
-    receipt = _receipt_items(pending) or "—"
     await bot.send_message(
         chat_state.chat_id,
         t("batch_ready", lang).format(items=receipt),

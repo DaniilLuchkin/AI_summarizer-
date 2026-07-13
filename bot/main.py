@@ -59,6 +59,16 @@ async def _run() -> None:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
+    # Optional error monitoring: enabled only when SENTRY_DSN is set.
+    if settings.sentry_dsn:
+        try:
+            import sentry_sdk
+
+            sentry_sdk.init(dsn=settings.sentry_dsn, send_default_pii=False)
+            logger.info("Sentry error monitoring enabled")
+        except Exception:  # noqa: BLE001 - monitoring must never block startup
+            logger.warning("Sentry init failed; continuing without it")
+
     if not settings.database_url:
         raise RuntimeError("DATABASE_URL is required (add the Railway Postgres plugin)")
 

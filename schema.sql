@@ -26,8 +26,36 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_credits INTEGER NOT NULL DEFAUL
 ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_credits_date DATE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS signup_bonus_granted BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS byo_active BOOLEAN NOT NULL DEFAULT TRUE;
+-- Preferred writing style for outgoing replies/follow-ups (NULL = not set).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS tone TEXT;
+
+-- Recent finalized batches (text only), so /history can restore them.
+-- Capped at the last 20 per user on insert; wiped by /forgetme.
+CREATE TABLE IF NOT EXISTS batches (
+  id          BIGSERIAL PRIMARY KEY,
+  telegram_id BIGINT NOT NULL,
+  chat_id     BIGINT NOT NULL,
+  items_json  TEXT NOT NULL,                 -- JSON list of labeled item texts
+  receipt     TEXT NOT NULL DEFAULT '',      -- compact "💬 3 · 🎙 2 (3:40)" line
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS batches_uid_idx ON batches (telegram_id, created_at DESC);
+
+-- Lightweight product analytics: one row per event (signup, batch_ready,
+-- action:<key>, paywall, purchase_*). No message content is ever stored here.
+CREATE TABLE IF NOT EXISTS events (
+  id          BIGSERIAL PRIMARY KEY,
+  telegram_id BIGINT NOT NULL,
+  name        TEXT NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS events_name_idx ON events (name, created_at);
 ALTER TABLE users ALTER COLUMN bonus_audio_sec SET DEFAULT 0;
 ALTER TABLE users ALTER COLUMN bonus_photos SET DEFAULT 0;
+
+-- The per-type daily counters were replaced by the credit ledger; drop the
+-- obsolete table (and its old per-user rows) if it still exists.
+DROP TABLE IF EXISTS usage_daily;
 
 -- Credit ledger: one row per grant/charge, delta in tenths.
 CREATE TABLE IF NOT EXISTS credit_ledger (

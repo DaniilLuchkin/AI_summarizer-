@@ -130,8 +130,10 @@ class Settings(BaseSettings):
     # instead of being silently eaten.
     drop_pending_updates: bool = False
 
-    # --- Logging ----------------------------------------------------------
+    # --- Logging / monitoring ---------------------------------------------
     log_level: str = "INFO"
+    # Sentry DSN for error monitoring; empty = disabled.
+    sentry_dsn: str = ""
 
     @property
     def text_model_pro(self) -> str:

@@ -156,6 +156,55 @@ CUSTOM_SYSTEM = (
     + _COMMON
 )
 
+# --- Freelancer templates (packaged custom prompts) ---------------------------
+# Each runs through the custom-prompt path with the prompt below as the
+# instruction. "tone": the user's saved writing style is applied (client-facing
+# output). Button labels live in texts.py as tpl_<key>.
+TEMPLATES: dict[str, dict] = {
+    "brief": {
+        "tone": False,
+        "prompt": (
+            "From the messages, produce a clear work brief (technical "
+            "specification): goal, scope, deliverables, functional requirements, "
+            "constraints, any deadlines mentioned, and a list of open questions "
+            "to clarify with the client."
+        ),
+    },
+    "payment": {
+        "tone": True,
+        "prompt": (
+            "Write a short, polite, professional payment reminder message the "
+            "user can send to their client, based on the work and agreements in "
+            "the messages. Never invent amounts or dates — use a bracketed "
+            "placeholder if they aren't in the text."
+        ),
+    },
+    "client_summary": {
+        "tone": True,
+        "prompt": (
+            "Write a brief status update addressed to the client: what has been "
+            "agreed, what is already done, what happens next, and what is needed "
+            "from the client. Friendly and professional, ready to send."
+        ),
+    },
+    "invoice": {
+        "tone": False,
+        "prompt": (
+            "Produce a concise itemized scope-of-work description of the "
+            "completed or agreed work, suitable for an invoice or act of work: "
+            "a numbered list, one line per item, no fluff."
+        ),
+    },
+}
+
+# Actions whose output the user sends onward — the saved tone applies to these.
+TONE_ACTION_KEYS = {"reply", "email"}
+# Appended to the system prompt when a tone is set and applicable.
+TONE_INSTRUCTION = (
+    "The user's preferred writing style for messages they send out: \"{tone}\". "
+    "Write the output in exactly this style. "
+)
+
 # --- Group mode --------------------------------------------------------------
 # Each is fed a transcript of recent group messages as "Name: text" lines.
 _GROUP_COMMON = (

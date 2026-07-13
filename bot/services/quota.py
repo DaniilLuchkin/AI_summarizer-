@@ -67,6 +67,7 @@ class Quota:
             await self.db.grant_credits(
                 telegram_id, _to_tenths(self.s.signup_bonus_credits), "signup_bonus"
             )
+            await self.db.track_event(telegram_id, "signup")
 
     @staticmethod
     def _gen_referral_code(telegram_id: int) -> str:

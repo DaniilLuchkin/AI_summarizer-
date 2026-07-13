@@ -27,6 +27,8 @@ from bot.prompts import (
     PDF_SYSTEM,
     SYSTEM_PROMPTS,
     TEXT_ACTION_KEYS,
+    TONE_ACTION_KEYS,
+    TONE_INSTRUCTION,
 )
 from bot.services import deck_design, deck_qa
 from bot.runtime import AppContext
@@ -130,11 +132,14 @@ async def run_staged(
     action_key: str,
     source_message: Message | None,
     preset_instruction: str | None = None,
+    use_tone: bool | None = None,
 ) -> None:
     """Run a staged action, applying quotas/feature gates and BYO key/model.
 
     `source_message` supplies optional context; `preset_instruction` is used by
-    saved prompts (a fixed custom instruction with no source message).
+    saved prompts and templates (a fixed instruction with no source message).
+    `use_tone` forces the saved writing style on/off; None = automatic (applied
+    to the client-facing reply/email actions).
     """
     chat_state = ctx.store.get(message.chat.id)
     if chat_state is None or not chat_state.has_active_batch:
@@ -161,12 +166,15 @@ async def run_staged(
         await message.answer(t("feature_unavailable", lang))
         return
 
-    byo = ctx.quota.has_byo(await ctx.quota.ensure_user(user_id))
+    user = await ctx.quota.ensure_user(user_id)
+    byo = ctx.quota.has_byo(user)
     # Soft balance check (non-BYO): text is charged AFTER the response by tokens,
     # so here we only block when the user is already at zero.
     if not byo and not await ctx.credits.has_any(user_id):
+        await ctx.db.track_event(user_id, "paywall")
         await _send_paywall(message, lang)
         return
+    await ctx.db.track_event(user_id, f"action:{action_key}")
 
     api_key = await ctx.quota.api_key_for(user_id)
     # Per-task model resolution honours a BYO user's /models overrides.
@@ -175,19 +183,28 @@ async def run_staged(
     as_file = render.wants_file(added_text)
     formatted = as_file or render.wants_formatting(added_text)
 
+    # The saved writing style applies to client-facing output (reply/email and
+    # any template that asked for it via use_tone).
+    if use_tone is None:
+        use_tone = action_key in TONE_ACTION_KEYS
+    tone = user.get("tone") if use_tone else None
+
     if action_key == "custom":
         content = _build_custom_content(document, added_text, parts)
+        system = CUSTOM_SYSTEM + (TONE_INSTRUCTION.format(tone=tone) if tone else "")
         chat_state.last_custom_prompt = added_text.strip() or None
         await run_llm(
-            message, ctx, lang, CUSTOM_SYSTEM, content, model, api_key,
+            message, ctx, lang, system, content, model, api_key,
             formatted=formatted, as_file=as_file, user_id=user_id, charge_text=not byo,
         )
-        if chat_state.last_custom_prompt:
+        # Don't offer to save prompts that are already canned (templates / saved).
+        if chat_state.last_custom_prompt and preset_instruction is None:
             await _offer_save_prompt(message, lang)
     else:  # a predefined text action
         content = _build_action_content(document, added_text, parts)
+        system = SYSTEM_PROMPTS[action_key] + (TONE_INSTRUCTION.format(tone=tone) if tone else "")
         await run_llm(
-            message, ctx, lang, SYSTEM_PROMPTS[action_key], content, model, api_key,
+            message, ctx, lang, system, content, model, api_key,
             formatted=formatted, as_file=as_file, user_id=user_id, charge_text=not byo,
         )
 

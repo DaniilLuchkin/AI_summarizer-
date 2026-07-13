@@ -74,6 +74,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "Команды\n"
             "• Основные: /start, /reset, /help, /lang\n"
             "• Аккаунт и тарифы: /account (баланс и покупки), /plans\n"
+            "• Работа: /history (прошлые пачки), /tone (стиль ответов)\n"
             "• Свой ключ и модели: /setkey, /removekey, /source, /models\n"
             "• Запросы: /prompts (сохранённые)\n"
             "• Друзья и данные: /invite, /privacy, /forgetme\n"
@@ -88,6 +89,29 @@ TEXTS: dict[str, dict[str, str]] = {
         "voice_transcript_header": "🎙 Расшифровка:",
         "btn_retry": "🔄 Повторить",
         "credits_low_warning": "⚠️ Осталось мало кредитов: {balance}. Пополните, чтобы не прерываться.",
+        # --- Freelancer templates ---
+        "btn_templates": "✨ Шаблоны",
+        "btn_back": "⬅️ Назад",
+        "tpl_brief": "📋 ТЗ из переписки",
+        "tpl_payment": "💰 Напоминание об оплате",
+        "tpl_client_summary": "🤝 Резюме для клиента",
+        "tpl_invoice": "📄 Описание работ",
+        # --- Tone (/tone) ---
+        "tone_current": "✍️ Ваш тон ответов:\n«{tone}»\n\nПришлите новый текст, чтобы изменить.",
+        "tone_not_set": (
+            "✍️ Тон не настроен. Пришлите текст — например: «дружелюбно, на «вы», кратко». "
+            "Он будет применяться к Ответу, Письму и клиентским шаблонам."
+        ),
+        "tone_saved": "✅ Тон сохранён.",
+        "tone_reset": "🗑 Тон сброшен.",
+        "btn_tone_reset": "🗑 Сбросить",
+        "tone_too_long": "⚠️ Слишком длинно — до 300 символов.",
+        "account_tone_set": "✍️ Тон ответов: настроен · изменить — /tone",
+        "account_tone_unset": "✍️ Тон ответов: не настроен · настроить — /tone",
+        # --- History (/history) ---
+        "history_list": "🗂 Ваши последние пачки — нажмите, чтобы вернуться к ней:",
+        "history_empty": "История пуста — перешлите сообщения, чтобы собрать первую пачку.",
+        "batch_restored": "↩️ Пачка восстановлена: {items}\nВыберите действие — или напишите запрос.",
         "batch_limit_reached": (
             "⚠️ Достигнут лимит в {limit} сообщений на пачку. "
             "Лишние сообщения проигнорированы."
@@ -165,12 +189,13 @@ TEXTS: dict[str, dict[str, str]] = {
         "prompts_limit": "На бесплатном тарифе можно хранить до {limit} промптов. Pro — без ограничений: /pro",
         "btn_save_prompt": "💾 Сохранить промпт",
         "privacy_text": (
-            "🔒 Приватность\n\nПересланный контент обрабатывается временно — только чтобы "
-            "выполнить ваше действие. Производный текст (расшифровки/распознавание) кэшируется "
-            "по непрозрачному файловому id Telegram, чтобы не платить дважды, и не содержит "
-            "идентификаторов аккаунта. Мы ничего не продаём. Удалить свои данные: /forgetme"
+            "🔒 Приватность\n\nПересланный контент обрабатывается, чтобы выполнить ваше "
+            "действие; текст последних пачек хранится в вашей истории (/history, до 20). "
+            "Производный текст (расшифровки/распознавание) кэшируется по непрозрачному "
+            "файловому id Telegram, чтобы не платить дважды, и не содержит идентификаторов "
+            "аккаунта. Мы ничего не продаём. Удалить все данные: /forgetme"
         ),
-        "forgetme_confirm": "Удалить все ваши данные (тариф, лимиты, промпты, платежи)? Это необратимо.",
+        "forgetme_confirm": "Удалить все ваши данные (тариф, историю пачек, промпты, платежи)? Это необратимо.",
         "forgetme_done": "🗑 Готово. Все ваши данные удалены.",
         # --- Plans / upgrade ---
         "btn_upgrade": "⭐ Перейти на Pro",
@@ -309,6 +334,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "Commands\n"
             "• Everyday: /start, /reset, /help, /lang\n"
             "• Account & pricing: /account (balance & purchases), /plans\n"
+            "• Work: /history (recent batches), /tone (reply style)\n"
             "• Your key & models: /setkey, /removekey, /source, /models\n"
             "• Prompts: /prompts (saved)\n"
             "• Friends & data: /invite, /privacy, /forgetme\n"
@@ -323,6 +349,29 @@ TEXTS: dict[str, dict[str, str]] = {
         "voice_transcript_header": "🎙 Transcript:",
         "btn_retry": "🔄 Retry",
         "credits_low_warning": "⚠️ Credits running low: {balance}. Top up so you're not interrupted.",
+        # --- Freelancer templates ---
+        "btn_templates": "✨ Templates",
+        "btn_back": "⬅️ Back",
+        "tpl_brief": "📋 Brief from the thread",
+        "tpl_payment": "💰 Payment reminder",
+        "tpl_client_summary": "🤝 Client status update",
+        "tpl_invoice": "📄 Scope of work",
+        # --- Tone (/tone) ---
+        "tone_current": "✍️ Your reply tone:\n“{tone}”\n\nSend new text to change it.",
+        "tone_not_set": (
+            "✍️ No tone set. Send a description — e.g. “friendly, formal, concise”. "
+            "It's applied to Reply, Follow-up, and client-facing templates."
+        ),
+        "tone_saved": "✅ Tone saved.",
+        "tone_reset": "🗑 Tone cleared.",
+        "btn_tone_reset": "🗑 Clear",
+        "tone_too_long": "⚠️ Too long — 300 characters max.",
+        "account_tone_set": "✍️ Reply tone: set · change — /tone",
+        "account_tone_unset": "✍️ Reply tone: not set · set it — /tone",
+        # --- History (/history) ---
+        "history_list": "🗂 Your recent batches — tap one to bring it back:",
+        "history_empty": "History is empty — forward some messages to build your first batch.",
+        "batch_restored": "↩️ Batch restored: {items}\nPick an action — or type your prompt.",
         "batch_limit_reached": (
             "⚠️ Reached the limit of {limit} messages per batch. Extra messages ignored."
         ),
@@ -397,12 +446,13 @@ TEXTS: dict[str, dict[str, str]] = {
         "prompts_limit": "Free plan stores up to {limit} prompts. Pro is unlimited: /pro",
         "btn_save_prompt": "💾 Save prompt",
         "privacy_text": (
-            "🔒 Privacy\n\nForwarded content is processed transiently — only to perform the "
-            "action you asked for. Derived text (transcripts/OCR) is cached by Telegram's opaque "
-            "file id to avoid re-billing and contains no account identifiers. Nothing is sold. "
-            "Delete your data: /forgetme"
+            "🔒 Privacy\n\nForwarded content is processed to perform the action you asked "
+            "for; the text of your recent batches is kept in your history (/history, up to "
+            "20). Derived text (transcripts/OCR) is cached by Telegram's opaque file id to "
+            "avoid re-billing and contains no account identifiers. Nothing is sold. "
+            "Delete all your data: /forgetme"
         ),
-        "forgetme_confirm": "Delete all your data (plan, limits, saved prompts, payments)? This can't be undone.",
+        "forgetme_confirm": "Delete all your data (plan, batch history, saved prompts, payments)? This can't be undone.",
         "forgetme_done": "🗑 Done. All your data has been deleted.",
         # --- Plans / upgrade ---
         "btn_upgrade": "⭐ Upgrade to Pro",
@@ -542,6 +592,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "Команди\n"
             "• Основні: /start, /reset, /help, /lang\n"
             "• Акаунт і тарифи: /account (баланс і покупки), /plans\n"
+            "• Робота: /history (минулі пачки), /tone (стиль відповідей)\n"
             "• Свій ключ і моделі: /setkey, /removekey, /source, /models\n"
             "• Запити: /prompts (збережені)\n"
             "• Друзі та дані: /invite, /privacy, /forgetme\n"
@@ -556,6 +607,29 @@ TEXTS: dict[str, dict[str, str]] = {
         "voice_transcript_header": "🎙 Розшифровка:",
         "btn_retry": "🔄 Повторити",
         "credits_low_warning": "⚠️ Залишилося мало кредитів: {balance}. Поповніть, щоб не перериватися.",
+        # --- Freelancer templates ---
+        "btn_templates": "✨ Шаблони",
+        "btn_back": "⬅️ Назад",
+        "tpl_brief": "📋 ТЗ з листування",
+        "tpl_payment": "💰 Нагадування про оплату",
+        "tpl_client_summary": "🤝 Резюме для клієнта",
+        "tpl_invoice": "📄 Опис робіт",
+        # --- Tone (/tone) ---
+        "tone_current": "✍️ Ваш тон відповідей:\n«{tone}»\n\nНадішліть новий текст, щоб змінити.",
+        "tone_not_set": (
+            "✍️ Тон не налаштовано. Надішліть текст — наприклад: «дружньо, на «ви», стисло». "
+            "Він застосовуватиметься до Відповіді, Листа та клієнтських шаблонів."
+        ),
+        "tone_saved": "✅ Тон збережено.",
+        "tone_reset": "🗑 Тон скинуто.",
+        "btn_tone_reset": "🗑 Скинути",
+        "tone_too_long": "⚠️ Занадто довго — до 300 символів.",
+        "account_tone_set": "✍️ Тон відповідей: налаштований · змінити — /tone",
+        "account_tone_unset": "✍️ Тон відповідей: не налаштований · налаштувати — /tone",
+        # --- History (/history) ---
+        "history_list": "🗂 Ваші останні пачки — натисніть, щоб повернутися до неї:",
+        "history_empty": "Історія порожня — перешліть повідомлення, щоб зібрати першу пачку.",
+        "batch_restored": "↩️ Пачку відновлено: {items}\nОберіть дію — або напишіть запит.",
         "batch_limit_reached": (
             "⚠️ Досягнуто ліміту в {limit} повідомлень на пачку. "
             "Зайві повідомлення проігноровано."
@@ -632,12 +706,13 @@ TEXTS: dict[str, dict[str, str]] = {
         "prompts_limit": "На безкоштовному тарифі можна зберігати до {limit} промптів. Pro — без обмежень: /pro",
         "btn_save_prompt": "💾 Зберегти промпт",
         "privacy_text": (
-            "🔒 Приватність\n\nПереслан контент обробляється тимчасово — лише щоб виконати вашу "
-            "дію. Похідний текст (розшифрування/розпізнавання) кешується за непрозорим файловим "
-            "id Telegram, щоб не платити двічі, і не містить ідентифікаторів акаунта. Ми нічого "
-            "не продаємо. Видалити дані: /forgetme"
+            "🔒 Приватність\n\nПересланий контент обробляється, щоб виконати вашу дію; текст "
+            "останніх пачок зберігається у вашій історії (/history, до 20). Похідний текст "
+            "(розшифрування/розпізнавання) кешується за непрозорим файловим id Telegram, щоб "
+            "не платити двічі, і не містить ідентифікаторів акаунта. Ми нічого не продаємо. "
+            "Видалити всі дані: /forgetme"
         ),
-        "forgetme_confirm": "Видалити всі ваші дані (тариф, ліміти, промпти, платежі)? Це незворотно.",
+        "forgetme_confirm": "Видалити всі ваші дані (тариф, історію пачок, промпти, платежі)? Це незворотно.",
         "forgetme_done": "🗑 Готово. Усі ваші дані видалено.",
         # --- Plans / upgrade ---
         "btn_upgrade": "⭐ Перейти на Pro",
